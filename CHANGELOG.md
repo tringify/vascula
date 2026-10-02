@@ -5,7 +5,7 @@
 The first public release of Vascula.
 
 - **The template language:** variables, conditions, loops and ranges,
-  reusable templates with `render`, and 37 built-in filters.
+  reusable templates with `render`, and 50 built-in filters.
 - **Safe output:** everything a template prints is HTML-escaped.
 - **Explicit data:** a template reads only what your application gives it,
   and you can list every name it reads before you use it.
