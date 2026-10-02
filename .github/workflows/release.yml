@@ -1,0 +1,41 @@
+name: Release Vascula
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: vascula-release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Verify tagged version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: test "$RELEASE_TAG" = "$(cat module-version.txt)"
+      - run: bash scripts/verify.sh
+      - name: Build the documentation
+        run: |
+          go run ./cmd/vascula-docs -out dist/docs
+          python3 -m zipfile -c dist/vascula-docs.zip dist/docs
+          sha256sum dist/vascula-docs.zip > dist/vascula-docs.zip.sha256
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" --verify-tag \
+            --title "Vascula $RELEASE_TAG" --notes-file CHANGELOG.md \
+            dist/vascula-docs.zip dist/vascula-docs.zip.sha256

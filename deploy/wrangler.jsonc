@@ -1,0 +1,15 @@
+// The documentation site at vascula.dev: static assets only, no Worker code.
+// Build first: go run ./cmd/vascula-docs -out dist/docs
+// Then, from this directory: npx wrangler deploy
+{
+  "name": "vascula-docs",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "../dist/docs",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "routes": [{ "pattern": "vascula.dev", "custom_domain": true }],
+  "workers_dev": false,
+  "preview_urls": false
+}
