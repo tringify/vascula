@@ -287,3 +287,13 @@ Other errors are plain errors with a readable message ending in
 `(line L, col C)` when a position is known. Errors from filters, tags and the
 resolver wrap your original error, so `errors.Is` and `errors.As` work on them.
 See [Errors](/errors).
+
+### Output observation
+
+`Options.ObserveOutput func(OutputSpan)` optionally receives direct variable outputs
+in HTML text. `OutputSpan.Start` and `End` are byte offsets in the returned string;
+`Path` identifies the variable and `RootValue` identifies its current root object.
+Treat the root as read-only and do not retain it after the render. The observer
+does not change rendered bytes. Outputs in attributes, scripts/styles, textarea
+and title elements, captures, child renders and filtered expressions are excluded.
+This is a host inspection facility, not an authorization decision.

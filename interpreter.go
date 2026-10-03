@@ -75,8 +75,20 @@ var protectedFilter = map[string]bool{
 // work, this bounds depth.
 const maxRenderDepth = 32
 
+// OutputSpan identifies a direct variable output in HTML text. Byte offsets
+// refer to the final returned string. Filtered expressions, attributes, raw-text
+// elements, captures and child renders are excluded. RootValue is read-only.
+// Observers must not retain or mutate host data. No callback runs unless opted in.
+type OutputSpan struct {
+ Path []string
+ RootValue interface{}
+ Start, End int
+}
+
 // Options configures a single render.
 type Options struct {
+ ObserveOutput func(OutputSpan)
+
 	// Data is host-supplied data by root name. Only roots named in Allow are
 	// readable; reading any other name that is not a variable is an
 	// UndeclaredNameError.
@@ -164,6 +176,8 @@ func (t *Template) Render(opts Options) (string, error) {
 		filters:     filters,
 		hostFilters: hostFilters,
 		out:         &out,
+ finalOut: &out,
+ observeOutput: opts.ObserveOutput,
 		resolve:     opts.Resolve,
 		tags:        opts.Tags,
 		budget:      work,

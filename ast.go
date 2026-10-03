@@ -12,6 +12,7 @@ type textNode struct{ text string }
 type outputNode struct {
 	expr  expression
 	inTag bool
+	inHTMLText bool
 }
 
 type ifBranch struct {
