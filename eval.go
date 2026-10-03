@@ -172,8 +172,8 @@ func (b *budget) wrote(n int) error {
 
 // evalCtx is one render's mutable state.
 type evalCtx struct {
- finalOut *strings.Builder
- observeOutput func(OutputSpan)
+	finalOut      *strings.Builder
+	observeOutput func(OutputSpan)
 
 	root        map[string]interface{} // host data (access-gated by allowed)
 	allowed     map[string]bool        // allowed data roots
@@ -211,18 +211,30 @@ func (e *evalCtx) renderNode(n node) error {
 		if err != nil {
 			return err
 		}
-		start:=e.out.Len()
-        if err:=e.writeIn(v,x.inTag);err!=nil{return err}
-        if e.observeOutput!=nil && x.inHTMLText && e.out==e.finalOut {
-          if direct,ok:=x.expr.(varExpr);ok {
-            path:=make([]string,0,len(direct.segs));for _,seg:=range direct.segs {if seg.idx!=nil {path=nil;break};path=append(path,seg.name)}
-            if len(path)>1 && e.out.Len()>start {
-              root,err:=e.resolveVar(varExpr{segs:direct.segs[:1],pos:direct.pos});if err!=nil{return err}
-              e.observeOutput(OutputSpan{Path:path,RootValue:root,Start:start,End:e.out.Len()})
-            }
-          }
-        }
-        return nil
+		start := e.out.Len()
+		if err := e.writeIn(v, x.inTag); err != nil {
+			return err
+		}
+		if e.observeOutput != nil && x.inHTMLText && e.out == e.finalOut {
+			if direct, ok := x.expr.(varExpr); ok {
+				path := make([]string, 0, len(direct.segs))
+				for _, seg := range direct.segs {
+					if seg.idx != nil {
+						path = nil
+						break
+					}
+					path = append(path, seg.name)
+				}
+				if len(path) > 1 && e.out.Len() > start {
+					root, err := e.resolveVar(varExpr{segs: direct.segs[:1], pos: direct.pos})
+					if err != nil {
+						return err
+					}
+					e.observeOutput(OutputSpan{Path: path, RootValue: root, Start: start, End: e.out.Len()})
+				}
+			}
+		}
+		return nil
 	case ifNode:
 		return e.renderIf(x)
 	case forNode:

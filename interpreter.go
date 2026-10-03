@@ -80,14 +80,14 @@ const maxRenderDepth = 32
 // elements, captures and child renders are excluded. RootValue is read-only.
 // Observers must not retain or mutate host data. No callback runs unless opted in.
 type OutputSpan struct {
- Path []string
- RootValue interface{}
- Start, End int
+	Path       []string
+	RootValue  interface{}
+	Start, End int
 }
 
 // Options configures a single render.
 type Options struct {
- ObserveOutput func(OutputSpan)
+	ObserveOutput func(OutputSpan)
 
 	// Data is host-supplied data by root name. Only roots named in Allow are
 	// readable; reading any other name that is not a variable is an
@@ -169,18 +169,18 @@ func (t *Template) Render(opts Options) (string, error) {
 
 	var out strings.Builder
 	e := &evalCtx{
-		root:        orEmptyMap(opts.Data),
-		allowed:     allowed,
-		locals:      root,
-		globals:     opts.Globals,
-		filters:     filters,
-		hostFilters: hostFilters,
-		out:         &out,
- finalOut: &out,
- observeOutput: opts.ObserveOutput,
-		resolve:     opts.Resolve,
-		tags:        opts.Tags,
-		budget:      work,
+		root:          orEmptyMap(opts.Data),
+		allowed:       allowed,
+		locals:        root,
+		globals:       opts.Globals,
+		filters:       filters,
+		hostFilters:   hostFilters,
+		out:           &out,
+		finalOut:      &out,
+		observeOutput: opts.ObserveOutput,
+		resolve:       opts.Resolve,
+		tags:          opts.Tags,
+		budget:        work,
 	}
 	if err := e.renderNodes(t.nodes); err != nil {
 		return "", t.locate(err)
