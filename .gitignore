@@ -1,6 +1,4 @@
 .DS_Store
 /coverage.out
 /coverage.html
-/dist/
 *.test
-/deploy/.wrangler/

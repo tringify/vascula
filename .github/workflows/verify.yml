@@ -23,4 +23,3 @@ jobs:
           cache: false
       - run: bash scripts/verify.sh
       - run: go test -run '^$' -fuzz FuzzCompileAndRender -fuzztime 30s .
-      - run: go run ./cmd/vascula-docs -out dist/docs

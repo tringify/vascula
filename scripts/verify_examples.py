@@ -37,7 +37,7 @@ def verify():
     with tempfile.TemporaryDirectory(prefix="vascula-examples-") as temporary:
         work = Path(temporary)
         (work / "go.mod").write_text(
-            "module example.com/vascula-docs-consumer\n\ngo 1.25.0\n"
+            "module example.com/vascula-example\n\ngo 1.25.0\n"
             "require vascula.dev/vascula v0.0.0\n"
             "replace vascula.dev/vascula => " + json.dumps(str(root)) + "\n"
         )

@@ -1,6 +1,8 @@
 package vascula
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestInlineComments(t *testing.T) {
 	c, err := compileFixture(`a{# hidden #}b{#- ws-trim left #}c

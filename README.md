@@ -28,14 +28,7 @@ read [the changelog](CHANGELOG.md) before upgrading.
 The documentation lives at [vascula.dev](https://vascula.dev). Its source is
 the Markdown in [`docs/`](docs), and every page is also published as plain
 Markdown (`/<page>.md`) together with `/llms.txt` and `/llms-full.txt` for
-agents. Build and preview it locally without network access:
-
-```sh
-go run ./cmd/vascula-docs -out dist/docs -serve :8080
-```
-
-The builder refuses to overwrite an existing directory and fails on a broken
-internal link or anchor. Every template example in `docs/` is rendered by
+agents. Every template example in `docs/` is rendered by
 `TestDocumentationExamples`, every built-in filter must have a section in
 `docs/filters.md`, and every Go program in the docs is compiled and run by
 `scripts/verify_examples.py`.

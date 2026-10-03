@@ -11,10 +11,9 @@ Install Go 1.25 or later, clone the repository, and run:
 ```sh
 ./scripts/verify.sh
 go test -run '^$' -fuzz FuzzCompileAndRender -fuzztime 30s .
-go run ./cmd/vascula-docs -out dist/docs
 ```
 
-The engine and documentation builder use only Go's standard library. Tests need
+The engine uses only Go's standard library. Tests need
 no accounts, credentials, database or network connection. Supply an installed Go
 toolchain; verification does not download one.
 
