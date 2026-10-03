@@ -210,6 +210,7 @@ func (s *htmlScanner) mark(nodes []node) []node {
 			s.text(x.text)
 		case outputNode:
 			x.inTag = s.inTag()
+			x.inHTMLText = s.state == htmlData
 			s.output()
 			n = x
 		case ifNode:

@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, tringify-vascula]
     timeout-minutes: 10
     permissions:
       contents: write

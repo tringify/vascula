@@ -10,8 +10,9 @@ type textNode struct{ text string }
 // outputNode is {{ expr }}; expr may be a filterExpr. inTag is set at compile
 // time when the tag sits inside an HTML tag (see html_context.go).
 type outputNode struct {
-	expr  expression
-	inTag bool
+	expr       expression
+	inTag      bool
+	inHTMLText bool
 }
 
 type ifBranch struct {

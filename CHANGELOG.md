@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.2
+
+- Optional host output observation identifies direct variable outputs in HTML text without changing rendered bytes. Attribute, raw-text, captured, filtered and child outputs are excluded.
+
 ## v0.1.1
 
 - **Documentation:** corrected the number of built-in filters.
