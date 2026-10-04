@@ -76,8 +76,9 @@ var protectedFilter = map[string]bool{
 const maxRenderDepth = 32
 
 // OutputSpan identifies a direct variable output in HTML text. Byte offsets
-// refer to the final returned string. Filtered expressions, attributes, raw-text
-// elements, captures and child renders are excluded. RootValue is read-only.
+// refer to the final returned string. A variable with a single default filter
+// counts when its own value is printed. Other filtered expressions, attributes,
+// raw-text elements, captures and child renders are excluded. RootValue is read-only.
 // Observers must not retain or mutate host data. No callback runs unless opted in.
 type OutputSpan struct {
 	Path       []string

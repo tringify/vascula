@@ -42,3 +42,22 @@ func TestOutputSpansExcludeChildSettingsAndIdentifyLoopOwner(t *testing.T) {
 		t.Fatal("lost block identity")
 	}
 }
+
+func TestOutputSpansIncludeDefaultWhenTheValueIsPrinted(t *testing.T) {
+	tmpl, err := Compile(`<h1>{{ settings.heading | default: shop }}</h1><p>{{ settings.empty | default: 'Fallback' }}</p><p>{{ settings.heading | default: 'x' | upcase }}</p>`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var spans []OutputSpan
+	result, err := tmpl.Render(Options{
+		Settings: map[string]interface{}{"heading": "Useful objects", "empty": ""},
+		Data:     map[string]interface{}{"shop": "Store"}, Allow: []string{"shop"},
+		ObserveOutput: func(span OutputSpan) { spans = append(spans, span) },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(spans) != 1 || strings.Join(spans[0].Path, ".") != "settings.heading" || result[spans[0].Start:spans[0].End] != "Useful objects" {
+		t.Fatalf("spans %+v in %s", spans, result)
+	}
+}
