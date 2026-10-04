@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.3
+
+- Output observation also identifies a variable printed through a single `default` filter when its own value, not the fallback, is printed.
+
 ## v0.1.2
 
 - Optional host output observation identifies direct variable outputs in HTML text without changing rendered bytes. Attribute, raw-text, captured, filtered and child outputs are excluded.

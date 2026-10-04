@@ -199,6 +199,27 @@ func (e *evalCtx) renderNodes(nodes []node) error {
 	return nil
 }
 
+// printedVar returns the variable whose own value an output prints: a bare
+// variable, or a variable with a single default filter whose value is not
+// empty, so the fallback is not what appears.
+func (e *evalCtx) printedVar(expr expression) (varExpr, bool) {
+	switch x := expr.(type) {
+	case varExpr:
+		return x, true
+	case filterExpr:
+		base, ok := x.base.(varExpr)
+		if !ok || len(x.filters) != 1 || x.filters[0].name != "default" {
+			return varExpr{}, false
+		}
+		v, err := e.evalExpr(base)
+		if err != nil || v == nil || v == false || isEmptyValue(v) {
+			return varExpr{}, false
+		}
+		return base, true
+	}
+	return varExpr{}, false
+}
+
 func (e *evalCtx) renderNode(n node) error {
 	if err := e.budget.step(); err != nil {
 		return err
@@ -216,7 +237,7 @@ func (e *evalCtx) renderNode(n node) error {
 			return err
 		}
 		if e.observeOutput != nil && x.inHTMLText && e.out == e.finalOut {
-			if direct, ok := x.expr.(varExpr); ok {
+			if direct, ok := e.printedVar(x.expr); ok {
 				path := make([]string, 0, len(direct.segs))
 				for _, seg := range direct.segs {
 					if seg.idx != nil {
