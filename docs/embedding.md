@@ -48,6 +48,57 @@ template cannot be saved if it reads something it did not declare.
 **Build only what was asked for.** Since you know each template's roots before
 rendering, you can skip loading data no template on the page reads.
 
+## Compute values only when read
+
+Some values are costly and most templates never read them: a count that
+needs a query, a related record. Put a `*vascula.Lazy` in their place. The
+render computes it the first time a template uses it, and never otherwise.
+
+```go run
+package main
+
+import (
+	"fmt"
+
+	"vascula.dev/vascula"
+)
+
+func main() {
+	queries := 0
+	count := vascula.NewLazy(func() (interface{}, error) {
+		queries++ // one query, the first time a template uses the count
+		return 12, nil
+	})
+	brand := map[string]interface{}{"name": "Acme", "product_count": count}
+	for _, src := range []string{`{{ brand.name }}`, `{{ brand.product_count }} products`, `{{ brand | json }}`} {
+		tmpl, err := vascula.Compile(src)
+		if err != nil {
+			panic(err)
+		}
+		out, err := tmpl.Render(vascula.Options{Data: map[string]interface{}{"brand": brand}, Allow: []string{"brand"}})
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(out, queries)
+	}
+}
+```
+
+```output
+Acme 0
+12 products 1
+{"name":"Acme","product_count":12} 1
+```
+
+A template sees the computed value however it reaches it: a property, an
+index, a loop over the object, an alias, printing or serializing the whole
+object, a filter, a comparison. Nothing can bypass it, so no analysis of the
+template is needed. A load that fails fails the render.
+
+A `Lazy` computes once and keeps its result, so create them per request. To
+load many values in one query, have each `Lazy` ask a loader that fetches
+everything the request registered on its first call.
+
 ## Reserve your globals
 
 A template could `assign` a name that hides a global. Reserve each global's

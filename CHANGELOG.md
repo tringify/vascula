@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.4
+
+- **Lazy values:** a `*Lazy` (`NewLazy`) in data, settings or globals is computed the first time a render uses it, through every access path: reads, loops, output, filters, comparisons and host code arguments. `Resolve` computes the `Lazy` values inside a value for host code.
+
 ## v0.1.3
 
 - Output observation also identifies a variable printed through a single `default` filter when its own value, not the fallback, is printed.

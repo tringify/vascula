@@ -188,6 +188,7 @@ type evalCtx struct {
 	depth       int                // current {% render %} nesting depth
 	exprDepth   int
 	cycleState  map[int]int // {% cycle %} rotation per tag occurrence (render-scoped)
+	lazy        *lazyState  // Lazy values resolved whole during this render, children included
 }
 
 func (e *evalCtx) renderNodes(nodes []node) error {
@@ -228,7 +229,7 @@ func (e *evalCtx) renderNode(n node) error {
 	case textNode:
 		return e.write(safeString(x.text)) // literal markup is already HTML
 	case outputNode:
-		v, err := e.evalExpr(x.expr)
+		v, err := e.evalWhole(x.expr)
 		if err != nil {
 			return err
 		}
@@ -309,7 +310,7 @@ func (e *evalCtx) renderNode(n node) error {
 // renderCase evaluates {% case %}: the first when containing a value equal to
 // the subject renders; none → else body.
 func (e *evalCtx) renderCase(n caseNode) error {
-	subject, err := e.evalExpr(n.subject)
+	subject, err := e.evalWhole(n.subject)
 	if err != nil {
 		return err
 	}
@@ -318,7 +319,7 @@ func (e *evalCtx) renderCase(n caseNode) error {
 	}
 	for _, w := range n.whens {
 		for _, vx := range w.values {
-			v, err := e.evalExpr(vx)
+			v, err := e.evalWhole(vx)
 			if err != nil {
 				return err
 			}
@@ -391,6 +392,7 @@ func (e *evalCtx) renderChild(n renderNode) error {
 		budget:      e.budget,
 		resolve:     e.resolve,
 		depth:       e.depth + 1,
+		lazy:        e.lazy,
 	}
 	if err := ce.renderNodes(child.Template.nodes); err != nil {
 		return fmt.Errorf("{%% render %%} %q: %w", name, child.Template.locate(err))
@@ -507,6 +509,10 @@ func (e *evalCtx) write(v interface{}) error { return e.writeIn(v, false) }
 // writeIn writes v; inTag is true for an output tag inside an HTML tag, where
 // JSON text is escaped like any other string.
 func (e *evalCtx) writeIn(v interface{}, inTag bool) error {
+	v, err := e.whole(v)
+	if err != nil {
+		return err
+	}
 	if err := e.budget.value(v); err != nil {
 		return err
 	}
@@ -532,6 +538,57 @@ func (e *evalCtx) writeIn(v interface{}, inTag bool) error {
 }
 
 // --- expression evaluation ---
+
+// evalWhole evaluates an expression whose value is consumed whole (compared,
+// printed, passed to a filter or the host): every Lazy inside it computed.
+func (e *evalCtx) evalWhole(ex expression) (interface{}, error) {
+	v, err := e.evalExpr(ex)
+	if err != nil {
+		return nil, err
+	}
+	v, err = e.whole(v)
+	if err != nil {
+		if pos, ok := exprPos(ex); ok {
+			return nil, failAt(pos, err)
+		}
+		return nil, err
+	}
+	return v, nil
+}
+
+// exprPos is the source offset an expression's errors point at.
+func exprPos(ex expression) (int, bool) {
+	switch x := ex.(type) {
+	case varExpr:
+		return x.pos, true
+	case binaryExpr:
+		return x.pos, true
+	case rangeExpr:
+		return x.pos, true
+	case notExpr:
+		return exprPos(x.inner)
+	case filterExpr:
+		if len(x.filters) > 0 {
+			return x.filters[len(x.filters)-1].pos, true
+		}
+		return exprPos(x.base)
+	}
+	return 0, false
+}
+
+// lazyEntryFilters are the built-ins that only select, reorder or count the
+// entries of a collection and read at most one named field of each (the
+// shallowFilters, and sum): their input has its entries computed, and that
+// field (lazyKeyedFilters), not every Lazy at any depth, so their cost does not
+// grow with fields a template never reads. Whatever consumes an entry later
+// computes the rest. size reads no entry at all.
+var (
+	lazyEntryFilters = map[string]bool{
+		"where": true, "sort": true, "sort_natural": true, "map": true, "first": true,
+		"last": true, "reverse": true, "slice": true, "concat": true, "compact": true, "sum": true,
+	}
+	lazyKeyedFilters = map[string]bool{"where": true, "sort": true, "sort_natural": true, "map": true, "sum": true}
+)
 
 func (e *evalCtx) evalExpr(ex expression) (interface{}, error) {
 	if err := e.budget.step(); err != nil {
@@ -599,7 +656,7 @@ func (e *evalCtx) renderForm(x formNode) error {
 	}
 	sort.Strings(attrNames)
 	for _, name := range attrNames {
-		v, err := e.evalExpr(x.attrs[name])
+		v, err := e.evalWhole(x.attrs[name])
 		if err != nil {
 			return err
 		}
@@ -638,6 +695,12 @@ func (e *evalCtx) resolveVar(v varExpr) (interface{}, error) {
 	} else {
 		return nil, failAt(v.pos, &UndeclaredNameError{Name: root})
 	}
+	var err error
+	if l, ok := cur.(*Lazy); ok {
+		if cur, err = l.Value(); err != nil {
+			return nil, failAt(v.pos, err)
+		}
+	}
 
 	for _, seg := range v.segs[1:] {
 		if err := e.budget.step(); err != nil {
@@ -659,6 +722,11 @@ func (e *evalCtx) resolveVar(v varExpr) (interface{}, error) {
 			cur = indexValue(cur, idx)
 		} else {
 			cur = fieldValue(cur, seg.name)
+		}
+		if l, ok := cur.(*Lazy); ok {
+			if cur, err = l.Value(); err != nil {
+				return nil, failAt(v.pos, err)
+			}
 		}
 	}
 	return cur, nil
@@ -688,11 +756,11 @@ func (e *evalCtx) evalBinary(b binaryExpr) (interface{}, error) {
 		return e.evalExpr(b.right)
 	}
 
-	l, err := e.evalExpr(b.left)
+	l, err := e.evalWhole(b.left)
 	if err != nil {
 		return nil, err
 	}
-	r, err := e.evalExpr(b.right)
+	r, err := e.evalWhole(b.right)
 	if err != nil {
 		return nil, err
 	}
@@ -743,13 +811,39 @@ func (e *evalCtx) evalFilters(f filterExpr) (interface{}, error) {
 		if !ok || fn == nil {
 			return nil, failAt(call.pos, fmt.Errorf("unknown filter %q", call.name))
 		}
+		builtin := !e.hostFilters[call.name]
+		entries := builtin && lazyEntryFilters[call.name]
 		fa := FilterArgs{Pos: make([]interface{}, len(call.args))}
 		for i, a := range call.args {
-			av, err := e.evalExpr(a)
+			var av interface{}
+			var err error
+			if entries && call.name == "concat" && i == 0 {
+				// The appended collection, like the input, by its entries.
+				if av, err = e.evalExpr(a); err == nil {
+					av, err = e.lazy.entries(av, "")
+				}
+			} else {
+				av, err = e.evalWhole(a)
+			}
 			if err != nil {
-				return nil, err
+				return nil, failAt(call.pos, err)
 			}
 			fa.Pos[i] = av
+		}
+		switch {
+		case builtin && call.name == "size":
+			// Counts entries: v is already a computed value.
+		case entries:
+			key := ""
+			if lazyKeyedFilters[call.name] {
+				key = toString(fa.Arg(0))
+			}
+			v, err = e.lazy.entries(v, key)
+		default:
+			v, err = e.whole(v)
+		}
+		if err != nil {
+			return nil, failAt(call.pos, err)
 		}
 		if len(call.named) > 0 {
 			// A built-in takes only the named arguments it documents. Anything
@@ -764,7 +858,7 @@ func (e *evalCtx) evalFilters(f filterExpr) (interface{}, error) {
 			}
 			fa.Named = make(map[string]interface{}, len(call.named))
 			for k, a := range call.named {
-				av, err := e.evalExpr(a)
+				av, err := e.evalWhole(a)
 				if err != nil {
 					return nil, err
 				}
@@ -800,6 +894,15 @@ func (e *evalCtx) evalFilters(f filterExpr) (interface{}, error) {
 		v, err = fn(v, fa)
 		if err != nil {
 			return nil, failAt(call.pos, fmt.Errorf("filter %q: %w", call.name, err))
+		}
+		if !builtin {
+			// A host filter may return a Lazy: the result is read like a variable.
+			if v, err = shallow(v); err != nil {
+				return nil, failAt(call.pos, err)
+			}
+		} else if !entries {
+			// Built from computed values only: the next filter need not walk it.
+			e.lazy.markComputed(v)
 		}
 		if err := check(v); err != nil {
 			return nil, failAt(call.pos, err)
@@ -856,7 +959,7 @@ func (e *evalCtx) renderHostTag(x hostTagNode) error {
 	}
 	call := TagCall{Name: x.name, lookup: e.lookup}
 	if x.arg != nil {
-		v, err := e.evalExpr(x.arg)
+		v, err := e.evalWhole(x.arg)
 		if err != nil {
 			return err
 		}

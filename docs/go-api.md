@@ -247,6 +247,41 @@ HTML the application vouches for. A `SafeHTML` value in data or settings, or
 returned by a filter or tag, is printed without escaping. Only use it for
 markup you produced or sanitized.
 
+## Lazy values
+
+### type Lazy
+
+```go
+type Lazy struct {
+	// unexported fields
+}
+
+func NewLazy(load func() (interface{}, error)) *Lazy
+func (l *Lazy) Value() (interface{}, error)
+func (l *Lazy) MarshalJSON() ([]byte, error)
+```
+
+A value computed the first time a render uses it, anywhere in `Data`,
+`Settings` or `Globals`. Reading it (a variable, property, index, `first`,
+`last`, a loop item) computes it; consuming a value whole (output, filters
+other than `size`, comparisons, `case`, host filter and tag arguments, form
+attributes) computes every `Lazy` inside it. A load error fails the render.
+`load` runs at most once, so create `Lazy` values per request. It may return
+another `Lazy` or data holding them, but must not use itself. `Value`
+follows a returned `Lazy`, so it never returns one; host code reading a path
+through data calls it at each step. `MarshalJSON` encodes the computed value. See [Embedding: compute values only when
+read](/embedding#compute-values-only-when-read).
+
+### func Resolve
+
+```go
+func Resolve(v interface{}) (interface{}, error)
+```
+
+Returns `v` with every `Lazy` computed, at any depth, without changing `v`.
+Use it in host code that reads template data directly: a host tag's
+`TagCall.Lookup` and output observation return values as you supplied them.
+
 ## Inspection
 
 | Method | Returns |
