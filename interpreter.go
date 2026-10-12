@@ -182,6 +182,7 @@ func (t *Template) Render(opts Options) (string, error) {
 		resolve:       opts.Resolve,
 		tags:          opts.Tags,
 		budget:        work,
+		lazy:          &lazyState{budget: work},
 	}
 	if err := e.renderNodes(t.nodes); err != nil {
 		return "", t.locate(err)
