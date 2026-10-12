@@ -26,11 +26,9 @@ func TestJSONIsEscapedInsideTags(t *testing.T) {
 	for _, src := range []string{
 		`<div data-x="{{ settings.x | json }}"></div>`,
 		`<div data-x='{{ settings.x | json }}'></div>`,
-		`<div data-x={{ settings.x | json }}></div>`,
-		`<div {{ settings.x | json }}></div>`,
 		`<div class="a" data-x="pre {{ settings.x | json }} post"></div>`,
 		"<div\n  data-x=\"{{ settings.x | json }}\">",
-		`{% if true %}<div data-x="{% endif %}{{ settings.x | json }}">`,
+		`{% if true %}<div data-x="{% else %}<div data-x="{% endif %}{{ settings.x | json }}">`,
 	} {
 		out := renderJSON(t, src)
 		if !strings.Contains(out, escaped) || strings.Contains(out, `" onmouseover`) {
@@ -76,5 +74,38 @@ func TestOutputAsUnquotedValueKeepsTheTagOpen(t *testing.T) {
 	out := renderJSON(t, `<div data-a={{ settings.x | json }} data-b="{{ settings.x | json }}">{{ settings.x | json }}</div>`)
 	if strings.Count(out, `{"t"`) != 1 {
 		t.Fatalf("want only the text-content json raw: %s", out)
+	}
+}
+
+// Raw text ends only at its own end tag, however it is split across text.
+func TestRawTextEndTagAcrossNodes(t *testing.T) {
+	for _, src := range []string{
+		`<script>a < b; "</scr" + "ipt>"</script>{{ settings.x | json }}`,
+		`<script>x</SCRIPT >{{ settings.x | json }}`,
+		`<style>a{}</style>{% if true %}{% endif %}<p>{{ settings.x | json }}</p>`,
+		`<script>x<{% if true %}/{% endif %}</script>{{ settings.x | json }}`,
+		`<textarea><</textarea>{{ settings.x | json }}`,
+	} {
+		if out := renderJSON(t, src); !strings.Contains(out, `{"t":"x\" onmouseover`) {
+			t.Errorf("%s\n rendered %s", src, out)
+		}
+	}
+	if out := renderJSON(t, `<script></scrip>{{ settings.x | json }}</script><div title="{{ settings.x | json }}">`); !strings.Contains(out, `title="{&#34;`) {
+		t.Errorf("rendered %s", out)
+	}
+}
+
+// URL attributes nothing prints into leave the compiled template as it was:
+// one text node, no markers.
+func TestLiteralAttributesAddNoNodes(t *testing.T) {
+	tpl, err := Compile(`<a href="/a" style="x"><img src="/b" srcset="/c 1x">{{ settings.x }}</a>`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tpl.nodes) != 3 {
+		t.Fatalf("%#v", tpl.nodes)
+	}
+	if text, ok := tpl.nodes[0].(textNode); !ok || text.text != `<a href="/a" style="x"><img src="/b" srcset="/c 1x">` {
+		t.Fatalf("%#v", tpl.nodes[0])
 	}
 }

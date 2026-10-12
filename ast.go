@@ -5,15 +5,25 @@ package vascula
 
 type node interface{ nodeMarker() }
 
-type textNode struct{ text string }
+// Nodes carry the byte offset of their source (pos) for compile errors.
+type textNode struct {
+	text string
+	pos  int
+}
 
-// outputNode is {{ expr }}; expr may be a filterExpr. inTag is set at compile
-// time when the tag sits inside an HTML tag (see html_context.go).
+// outputNode is {{ expr }}; expr may be a filterExpr. at and inHTMLText are
+// set at compile time from the surrounding markup (see html_context.go).
 type outputNode struct {
 	expr       expression
-	inTag      bool
+	pos        int
+	at         printContext
 	inHTMLText bool
 }
+
+// attrOpenNode and attrCloseNode bracket the value of a URL-bearing attribute;
+// the compile-time scan inserts them (see url_context.go).
+type attrOpenNode struct{ a *urlAttr }
+type attrCloseNode struct{ a *urlAttr }
 
 type ifBranch struct {
 	cond expression
@@ -25,6 +35,7 @@ type ifBranch struct {
 type ifNode struct {
 	branches []ifBranch
 	elseBody []node
+	pos      int
 }
 
 type forNode struct {
@@ -35,6 +46,7 @@ type forNode struct {
 	reversed bool
 	body     []node
 	elseBody []node // {% else %} renders when the collection is empty
+	pos      int
 }
 
 type assignNode struct {
@@ -56,11 +68,13 @@ type formNode struct {
 	kind       string                // host-defined literal kind, validated at compile
 	attrs      map[string]expression // literal-ish HTML attributes (class: "x"), attribute-escaped at render
 	body       []node
+	pos        int
 }
 
 type renderNode struct {
 	target expression
 	args   map[string]expression
+	pos    int
 }
 
 // (slot is rejected at COMPILE time — see parser.go — so there is no slotNode in the AST. It returns
@@ -73,6 +87,7 @@ type caseNode struct {
 	subject  expression
 	whens    []caseWhen
 	elseBody []node
+	pos      int
 }
 
 type caseWhen struct {
@@ -84,33 +99,38 @@ type caseWhen struct {
 type captureNode struct {
 	name string
 	body []node
+	pos  int
 }
 
 // breakNode / continueNode are loop control ({% break %} / {% continue %}) —
 // evaluated as sentinel errors the innermost for-loop absorbs.
-type breakNode struct{}
-type continueNode struct{}
+type breakNode struct{ pos int }
+type continueNode struct{ pos int }
 
 // cycleNode rotates through its values on successive renders ({% cycle 'a','b' %}).
 // id is assigned at parse time; rotation state lives on the evaluator per render.
 type cycleNode struct {
 	id     int
 	values []expression
+	pos    int
+	at     printContext
 }
 
-func (textNode) nodeMarker()     {}
-func (outputNode) nodeMarker()   {}
-func (ifNode) nodeMarker()       {}
-func (forNode) nodeMarker()      {}
-func (assignNode) nodeMarker()   {}
-func (renderNode) nodeMarker()   {}
-func (caseNode) nodeMarker()     {}
-func (captureNode) nodeMarker()  {}
-func (breakNode) nodeMarker()    {}
-func (continueNode) nodeMarker() {}
-func (cycleNode) nodeMarker()    {}
-func (formNode) nodeMarker()     {}
-func (hostTagNode) nodeMarker()  {}
+func (textNode) nodeMarker()      {}
+func (outputNode) nodeMarker()    {}
+func (ifNode) nodeMarker()        {}
+func (forNode) nodeMarker()       {}
+func (assignNode) nodeMarker()    {}
+func (renderNode) nodeMarker()    {}
+func (caseNode) nodeMarker()      {}
+func (captureNode) nodeMarker()   {}
+func (breakNode) nodeMarker()     {}
+func (continueNode) nodeMarker()  {}
+func (cycleNode) nodeMarker()     {}
+func (formNode) nodeMarker()      {}
+func (hostTagNode) nodeMarker()   {}
+func (attrOpenNode) nodeMarker()  {}
+func (attrCloseNode) nodeMarker() {}
 
 // --- expressions ---
 

@@ -39,7 +39,8 @@ inside the data cannot break the page.
 **Safe by default.** Everything you print is HTML-escaped. There is no `raw`
 filter and no way for a template to switch escaping off; only the application
 can hand over trusted HTML. JSON printed inside an HTML attribute is escaped
-for that position too.
+for that position too, and a link or other URL with printed parts cannot be a
+`javascript:` URL.
 
 **Explicit about data.** A template can only read the data roots the
 application allows. Reading anything else is an error, not a silent blank, and

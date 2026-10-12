@@ -123,7 +123,7 @@ func (s *lazyState) walk(v interface{}, depth int) (interface{}, bool, error) {
 		return nil, false, err
 	}
 	switch v.(type) {
-	case nil, bool, string, float64, int, int64, safeString, jsonString, SafeHTML, emptyMarker, *loopInfo:
+	case nil, bool, string, float64, int, int64, safeString, jsonString, SafeHTML, HTMLAttr, emptyMarker, *loopInfo:
 		return v, isLazy, nil
 	}
 	switch x := v.(type) {
@@ -415,7 +415,7 @@ func (s *lazyState) withField(entry interface{}, key string) (interface{}, bool,
 		}
 		copied[key] = computed
 		return copied, true, nil
-	case nil, bool, string, float64, int, int64, safeString, jsonString, SafeHTML:
+	case nil, bool, string, float64, int, int64, safeString, jsonString, SafeHTML, HTMLAttr:
 		return entry, false, nil
 	}
 	// Other host maps: computed whole.
@@ -440,7 +440,7 @@ func (s *lazyState) markComputed(v interface{}) {
 // whole is v as a consumer of the whole value sees it: every Lazy computed.
 func (e *evalCtx) whole(v interface{}) (interface{}, error) {
 	switch v.(type) {
-	case nil, string, safeString, jsonString, SafeHTML, float64, int64, int, bool:
+	case nil, string, safeString, jsonString, SafeHTML, HTMLAttr, float64, int64, int, bool:
 		return v, nil
 	}
 	return e.lazy.deep(v, 0)

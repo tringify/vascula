@@ -530,6 +530,8 @@ func parseDateValue(in interface{}) (time.Time, error) {
 		if v != nil {
 			return *v, nil
 		}
+	case Instant:
+		return v.Time(), nil
 	case string:
 		s := strings.TrimSpace(v)
 		if s == "now" || s == "today" {

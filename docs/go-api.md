@@ -86,6 +86,22 @@ Use JSON-shaped values in `Data`, `Settings` and `Globals`:
 `date` filter. Other types work where they behave like these, but JSON shapes
 are what the engine is tuned for.
 
+Two interfaces let a value print as text of the application's choosing while
+behaving as a number or a date everywhere else:
+
+- **`Number`**: `Float64() (float64, error)` and `String() string`, the shape
+  of `encoding/json`'s `Number`. Comparisons, arithmetic and the number
+  filters use `Float64`; output uses `String`. Use it for a decimal that must
+  print with its stored digits (`19.90`) or a locale's separators (`19,90`).
+- **`Instant`**: `Time() time.Time` and `String() string`. The `date` filter
+  and comparisons use `Time`; output uses `String`. An `Instant` equals or
+  orders against another date, or an ISO 8601 string (`"2026-10-01"`,
+  `"2026-10-01T09:30:00Z"`), by the moment it names; a string without an
+  offset is read at the `Instant`'s own clock.
+
+Give such types a `MarshalJSON` method so `json` writes the value rather than
+an empty object.
+
 ## Children
 
 ### type Child
@@ -244,8 +260,23 @@ type SafeHTML string
 ```
 
 HTML the application vouches for. A `SafeHTML` value in data or settings, or
-returned by a filter or tag, is printed without escaping. Only use it for
-markup you produced or sanitized.
+returned by a filter or tag, is printed without escaping in the page body. Only
+use it for markup you produced or sanitized. Inside a tag it is text: in an
+attribute value its tags are removed and the rest escaped, and where an
+attribute goes it prints only as a plain attribute name.
+
+### type HTMLAttr
+
+```go
+type HTMLAttr string
+```
+
+Attribute markup the application vouches for, such as `loading="lazy"`. It
+prints as written only where an attribute goes
+(`<img src="..." {{ img | image_loading }}>`), and is escaped text anywhere
+else. Produce it only in code whose output you fix, such as a filter returning
+one of a few constants; never wrap stored, translated or user-provided text in
+it.
 
 ## Lazy values
 

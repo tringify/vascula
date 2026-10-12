@@ -155,7 +155,7 @@ func TestAssignmentsOutliveTheirBlock(t *testing.T) {
 	for src, want := range map[string]string{
 		`{% if settings.on %}{% assign label = "yes" %}{% endif %}{{ label }}`:                                                              "yes",
 		`{% for i in settings.items %}{% assign last = i %}{% endfor %}{{ last }}`:                                                          "c",
-		`{% for i in settings.items %}{% if forloop.first %}{% capture first %}<{{ i }}>{% endcapture %}{% endif %}{% endfor %}{{ first }}`: "&lt;a&gt;",
+		`{% for i in settings.items %}{% if forloop.first %}{% capture first %}[{{ i }}]{% endcapture %}{% endif %}{% endfor %}{{ first }}`: "[a]",
 		`{% case "x" %}{% when "x" %}{% assign hit = 1 %}{% endcase %}{{ hit }}`:                                                            "1",
 		`{% assign total = 0 %}{% for i in settings.items %}{% assign total = total | plus: 1 %}{% endfor %}{{ total }}`:                    "3",
 		// An assignment to the loop variable changes this iteration only.

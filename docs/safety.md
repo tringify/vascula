@@ -25,6 +25,8 @@ Given that, Vascula guarantees:
 |---|---|
 | Data cannot inject markup | Every printed value is HTML-escaped. Templates cannot switch it off. See [Output](/output). |
 | Data cannot become code | Output is never evaluated again. A value containing `{{ }}` prints those characters. |
+| Data cannot choose a script URL | A link, source or other URL attribute with printed parts must, as a whole, be relative or use `http`, `https`, `mailto` or `tel`; anything else prints as `#`. See [Output](/output#links-and-other-urls). |
+| Data cannot add attributes | Output in unquoted values is fully escaped, names cannot be printed, and control flow cannot leave the markup ambiguous. See [Output](/output#where-output-can-stand-in-a-tag). |
 | A template reads only what it is given | Only allowed data roots, `settings`, globals and its own variables. Anything else is an error. |
 | A template uses only registered extensions | Unknown filters fail the render; unknown tags and form kinds fail compilation. |
 | A template cannot exhaust the machine | Compilation and rendering are bounded; see below. |
@@ -79,9 +81,11 @@ real templates need it.
 - **Extensions.** Filters, tags, the resolver and form handling run as your
   code, outside the limits. Keep them fast and bounded, and escape anything
   you put into `SafeHTML`.
-- **Trusted HTML.** Only wrap sanitized or self-built markup in `SafeHTML`.
-- **URLs, CSS and JavaScript.** Escaping does not make a value a safe URL or
-  script; see [Output: what escaping does not cover](/output#what-escaping-does-not-cover).
+- **Trusted HTML.** Only wrap sanitized or self-built markup in `SafeHTML`, and
+  only fixed attribute markup you build yourself in `HTMLAttr`.
+- **CSS and JavaScript.** Escaping does not make a value safe as a script or
+  style, and URLs are only checked in attributes; see
+  [Output: what escaping does not cover](/output#what-escaping-does-not-cover).
 - **Forms.** The form tag only writes the token; verify it, and validate every
   posted value, on the server.
 - **Time and memory.** The limits bound work, not wall-clock time or process
