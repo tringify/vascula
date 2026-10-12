@@ -34,7 +34,11 @@ func CompileWithOptions(src string, opts CompileOptions) (*Template, error) {
 	if err != nil {
 		return nil, (&Template{src: src}).locate(err)
 	}
-	return &Template{nodes: markOutputContexts(nodes), src: src}, nil
+	t := &Template{src: src}
+	if t.nodes, err = markOutputContexts(nodes, src); err != nil {
+		return nil, t.locate(err)
+	}
+	return t, nil
 }
 
 // Child is a resolved child template the evaluator renders for a {% render %}

@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // intFromFloat rejects values whose conversion to int would overflow or produce
@@ -37,6 +38,33 @@ type jsonString string
 // escape hatch: `raw` does not exist, output is auto-escaped, and only the host can emit unescaped HTML
 // by handing the interpreter a SafeHTML value.
 type SafeHTML string
+
+// HTMLAttr is attribute markup the host vouches for, such as `loading="lazy"`:
+// one or more complete attributes. It prints as written only where an
+// attribute goes (`<img src="…" {{ img | image_loading }}>`); anywhere else it
+// is text. SafeHTML is not attribute markup: where an attribute goes it prints
+// only as a single plain attribute name, and in an attribute value its tags are
+// stripped and the rest escaped. A host should produce HTMLAttr only from code
+// whose output it fixes (a filter returning one of a few constants), never from
+// stored or translated text.
+type HTMLAttr string
+
+// Number is a host value that is a number in templates while printing as its
+// own text: comparisons, arithmetic and the number filters use Float64, and
+// output uses String. encoding/json's Number has this shape, and a host can
+// use it for a decimal kept as written ("19.90") or formatted for a locale.
+type Number interface {
+	Float64() (float64, error)
+	String() string
+}
+
+// Instant is a host value that is a date in templates while printing as its
+// own text: the date filter and comparisons with other dates use Time, and
+// output uses String.
+type Instant interface {
+	Time() time.Time
+	String() string
+}
 
 // truthy: only nil, false, and the empty/absent marker are falsy. 0, "", and
 // empty-but-present arrays are TRUTHY. Use `.size > 0` when "has items" is the question.
@@ -70,6 +98,8 @@ func toString(v interface{}) string {
 	case jsonString:
 		return string(x)
 	case SafeHTML:
+		return string(x)
+	case HTMLAttr:
 		return string(x)
 	case string:
 		return x
@@ -110,10 +140,12 @@ func typeName(v interface{}) string {
 		return "nil"
 	case string:
 		return "string"
-	case float64, int, int64:
+	case float64, int, int64, Number:
 		return "number"
 	case bool:
 		return "boolean"
+	case time.Time, Instant:
+		return "date"
 	default:
 		return reflect.TypeOf(v).Kind().String()
 	}
@@ -130,6 +162,9 @@ func toFloat(v interface{}) (float64, bool) {
 	case string:
 		f, err := strconv.ParseFloat(strings.TrimSpace(x), 64)
 		return f, err == nil
+	case Number:
+		f, err := x.Float64()
+		return f, err == nil
 	default:
 		return 0, false
 	}
@@ -140,6 +175,8 @@ func isEmptyValue(v interface{}) bool {
 	case nil, emptyMarker:
 		return true
 	case SafeHTML:
+		return x == ""
+	case HTMLAttr:
 		return x == ""
 	case string:
 		return x == ""
@@ -167,6 +204,11 @@ func equalValues(a, b interface{}) bool {
 	}
 	if x, y, ok := intPair(a, b); ok {
 		return x == y
+	}
+	if at, bt, ok := instantPair(a, b); ok {
+		return at.Equal(bt)
+	} else if isInstant(a) || isInstant(b) {
+		return false
 	}
 	if af, ok := toFloat(a); ok {
 		if bf, ok := toFloat(b); ok {
@@ -206,6 +248,9 @@ func compareValues(a, b interface{}) (int, bool) {
 	if aIsStr && bIsStr {
 		return strings.Compare(as, bs), true
 	}
+	if at, bt, ok := instantPair(a, b); ok {
+		return at.Compare(bt), true
+	}
 	return 0, false // cross-type / unorderable → caller errors
 }
 
@@ -219,9 +264,68 @@ func toFloatStrict(v interface{}) (float64, bool) {
 		return float64(x), true
 	case int64:
 		return float64(x), true
+	case Number:
+		f, err := x.Float64()
+		return f, err == nil
 	default:
 		return 0, false
 	}
+}
+
+// instantOf is a date value as a time: a time.Time or a host Instant.
+func instantOf(v interface{}) (time.Time, bool) {
+	switch x := v.(type) {
+	case time.Time:
+		return x, true
+	case Instant:
+		return x.Time(), true
+	}
+	return time.Time{}, false
+}
+
+func isInstant(v interface{}) bool {
+	_, ok := instantOf(v)
+	return ok
+}
+
+// instantPair returns two dates to compare by the moment they name: two date
+// values, or a date value and an ISO 8601 string ("2026-10-01",
+// "2026-10-01T09:30:00", "2026-10-01T09:30:00Z"). A string without an offset
+// is read at the date value's own clock, so a date-only string names the same
+// day as a date-only value.
+func instantPair(a, b interface{}) (time.Time, time.Time, bool) {
+	at, aok := instantOf(a)
+	bt, bok := instantOf(b)
+	switch {
+	case aok && bok:
+		return at, bt, true
+	case aok:
+		if s, ok := b.(string); ok {
+			if t, ok := parseISOInstant(s, at.Location()); ok {
+				return at, t, true
+			}
+		}
+	case bok:
+		if s, ok := a.(string); ok {
+			if t, ok := parseISOInstant(s, bt.Location()); ok {
+				return t, bt, true
+			}
+		}
+	}
+	return time.Time{}, time.Time{}, false
+}
+
+func parseISOInstant(s string, loc *time.Location) (time.Time, bool) {
+	s = strings.TrimSpace(s)
+	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
+		return t, true
+	}
+	for _, layout := range []string{"2006-01-02T15:04:05.999999999", "2006-01-02T15:04", "2006-01-02"} {
+		if t, err := time.ParseInLocation(layout, s, loc); err == nil {
+			return t, true
+		}
+	}
+	return time.Time{}, false
 }
 
 // containsValue implements `a contains b` — substring for strings, membership for

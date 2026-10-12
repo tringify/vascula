@@ -76,7 +76,7 @@ func (p *parser) parseBlock(stops map[string]bool) ([]node, string, error) {
 		case tEOF:
 			return out, "", nil
 		case tText:
-			out = append(out, textNode{text: t.val})
+			out = append(out, textNode{text: t.val, pos: t.pos})
 			p.next()
 		case tOutputOpen:
 			n, err := p.parseOutput()
@@ -126,7 +126,8 @@ func (p *parser) consumeTagOpen() (string, error) {
 }
 
 func (p *parser) parseOutput() (node, error) {
-	if _, err := p.expect(tOutputOpen); err != nil {
+	open, err := p.expect(tOutputOpen)
+	if err != nil {
 		return nil, err
 	}
 	expr, err := p.parseExpr() // parseExpr already consumes a trailing filter pipeline
@@ -136,7 +137,7 @@ func (p *parser) parseOutput() (node, error) {
 	if _, err := p.expect(tOutputClose); err != nil {
 		return nil, err
 	}
-	return outputNode{expr: expr}, nil
+	return outputNode{expr: expr, pos: open.pos}, nil
 }
 
 func (p *parser) parseTag() (node, error) {
@@ -166,12 +167,12 @@ func (p *parser) parseTag() (node, error) {
 		if _, err := p.expect(tTagClose); err != nil {
 			return nil, err
 		}
-		return breakNode{}, nil
+		return breakNode{pos: p.openPos}, nil
 	case "continue":
 		if _, err := p.expect(tTagClose); err != nil {
 			return nil, err
 		}
-		return continueNode{}, nil
+		return continueNode{pos: p.openPos}, nil
 	case "cycle":
 		return p.parseCycle()
 	case "slot":
@@ -262,7 +263,7 @@ func (p *parser) parseIf(negate bool) (node, error) {
 	if _, err := p.expect(tTagClose); err != nil {
 		return nil, err
 	}
-	return ifNode{branches: branches, elseBody: elseBody}, nil
+	return ifNode{branches: branches, elseBody: elseBody, pos: open}, nil
 }
 
 var forStops = map[string]bool{"else": true, "endfor": true}
@@ -287,7 +288,7 @@ func (p *parser) parseFor() (node, error) {
 	if err != nil {
 		return nil, err
 	}
-	fn := forNode{varName: varTok.val, coll: coll}
+	fn := forNode{varName: varTok.val, coll: coll, pos: open}
 
 	// optional modifiers: limit: N | offset: N | reversed
 	for p.peek().typ == tIdent {
@@ -362,7 +363,7 @@ func (p *parser) parseCase() (node, error) {
 	if err != nil {
 		return nil, err
 	}
-	out := caseNode{subject: subject}
+	out := caseNode{subject: subject, pos: open}
 	for stop == "when" {
 		if _, err := p.consumeTagOpen(); err != nil {
 			return nil, err
@@ -448,11 +449,11 @@ func (p *parser) parseCapture() (node, error) {
 	if _, err := p.expect(tTagClose); err != nil {
 		return nil, err
 	}
-	return captureNode{name: name.val, body: body}, nil
+	return captureNode{name: name.val, body: body, pos: open}, nil
 }
 
 func (p *parser) parseCycle() (node, error) {
-	n := cycleNode{id: p.cycleSeq}
+	n := cycleNode{id: p.cycleSeq, pos: p.openPos}
 	p.cycleSeq++
 	for {
 		v, err := p.parseExpr()
@@ -526,6 +527,7 @@ func (p *parser) parseHostTag(name string, def TagDefinition) (node, error) {
 }
 
 func (p *parser) parseRender() (node, error) {
+	open := p.openPos
 	comp, err := p.parsePrimary()
 	if err != nil {
 		return nil, err
@@ -560,7 +562,7 @@ func (p *parser) parseRender() (node, error) {
 	if _, err := p.expect(tTagClose); err != nil {
 		return nil, err
 	}
-	return renderNode{target: comp, args: args}, nil
+	return renderNode{target: comp, args: args, pos: open}, nil
 }
 
 // parseForm parses {% form "action_kind" [, attr: expr ...] %} body {% endform %}. The kind is
@@ -626,7 +628,7 @@ func (p *parser) parseForm() (node, error) {
 	if _, err := p.expect(tTagClose); err != nil {
 		return nil, err
 	}
-	return formNode{kind: kind, definition: definition, attrs: attrs, body: body}, nil
+	return formNode{kind: kind, definition: definition, attrs: attrs, body: body, pos: open}, nil
 }
 
 // --- expression grammar: filter-pipeline over (or < and < comparison < primary) ---

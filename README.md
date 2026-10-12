@@ -52,9 +52,11 @@ Similar syntax does not imply compatibility with another template language.
 
 ## Safety
 
-Ordinary output is HTML-escaped. Literal template HTML, `SafeHTML` and host
-callbacks remain trusted. Vascula is not an HTML sanitizer and does not perform
-contextual JavaScript, CSS or URL escaping. Never evaluate rendered data as a
+Ordinary output is HTML-escaped. A URL attribute such as `href` or `src` with
+printed parts must, as a whole, be relative or use `http`, `https`, `mailto`
+or `tel`; anything else prints as `#`. Literal template HTML, `SafeHTML` in the
+page body, `HTMLAttr` where an attribute goes and host callbacks remain trusted. Vascula is not an HTML sanitizer and does not perform
+contextual JavaScript or CSS escaping. Never evaluate rendered data as a
 second template or return source code when rendering fails.
 
 Compilation and rendering enforce source, token, nesting, work, output and value

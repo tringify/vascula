@@ -189,6 +189,7 @@ type evalCtx struct {
 	exprDepth   int
 	cycleState  map[int]int // {% cycle %} rotation per tag occurrence (render-scoped)
 	lazy        *lazyState  // Lazy values resolved whole during this render, children included
+	attrs       []openAttr  // URL-bearing attribute values being rendered, innermost last
 }
 
 func (e *evalCtx) renderNodes(nodes []node) error {
@@ -222,6 +223,20 @@ func (e *evalCtx) printedVar(expr expression) (varExpr, bool) {
 }
 
 func (e *evalCtx) renderNode(n node) error {
+	// Attribute markers are bookkeeping, not template work.
+	switch x := n.(type) {
+	case attrOpenNode:
+		if x.a.dynamic {
+			e.attrs = append(e.attrs, openAttr{a: x.a, out: e.out})
+			e.out = &strings.Builder{}
+		}
+		return nil
+	case attrCloseNode:
+		if x.a.dynamic {
+			return e.closeAttr(x.a)
+		}
+		return nil
+	}
 	if err := e.budget.step(); err != nil {
 		return err
 	}
@@ -234,7 +249,7 @@ func (e *evalCtx) renderNode(n node) error {
 			return err
 		}
 		start := e.out.Len()
-		if err := e.writeIn(v, x.inTag); err != nil {
+		if err := e.writeIn(v, x.at); err != nil {
 			return err
 		}
 		if e.observeOutput != nil && x.inHTMLText && e.out == e.finalOut {
@@ -301,7 +316,7 @@ func (e *evalCtx) renderNode(n node) error {
 		if err != nil {
 			return err
 		}
-		return e.write(v)
+		return e.writeIn(v, x.at)
 	default:
 		return fmt.Errorf("unrenderable node %T", n)
 	}
@@ -504,11 +519,33 @@ func (e *evalCtx) renderInScope(nodes []node) error {
 	return e.renderNodes(nodes)
 }
 
-func (e *evalCtx) write(v interface{}) error { return e.writeIn(v, false) }
+// openAttr is a URL-bearing attribute value being rendered into its own
+// buffer; out is where it goes once checked.
+type openAttr struct {
+	a   *urlAttr
+	out *strings.Builder
+}
 
-// writeIn writes v; inTag is true for an output tag inside an HTML tag, where
-// JSON text is escaped like any other string.
-func (e *evalCtx) writeIn(v interface{}, inTag bool) error {
+// closeAttr checks the value of the attribute a, rendered since it opened, and
+// writes it where the attribute stands.
+func (e *evalCtx) closeAttr(a *urlAttr) error {
+	n := len(e.attrs)
+	if n == 0 || e.attrs[n-1].a != a {
+		return fmt.Errorf("attribute value closed where it did not open")
+	}
+	value := e.out.String()
+	e.out = e.attrs[n-1].out
+	e.attrs = e.attrs[:n-1]
+	e.out.WriteString(checkAttrValue(a, value))
+	return nil
+}
+
+func (e *evalCtx) write(v interface{}) error { return e.writeIn(v, printContext{}) }
+
+// writeIn writes v as printed at (see html_context.go): inside an HTML tag JSON
+// text is escaped like any other string; in an unquoted attribute value every
+// delimiter is escaped too.
+func (e *evalCtx) writeIn(v interface{}, at printContext) error {
 	v, err := e.whole(v)
 	if err != nil {
 		return err
@@ -516,19 +553,50 @@ func (e *evalCtx) writeIn(v interface{}, inTag bool) error {
 	if err := e.budget.value(v); err != nil {
 		return err
 	}
-	var s string
+	var s, text string
 	switch ss := v.(type) {
 	case safeString:
 		s = string(ss)
+		text = html.UnescapeString(s)
 	case jsonString:
 		s = string(ss)
-		if inTag {
+		text = s
+		if at.inTag {
 			s = html.EscapeString(s)
 		}
 	case SafeHTML: // host-vouched trusted HTML — emit as-is, no auto-escape
 		s = string(ss)
+		text = html.UnescapeString(s)
+		if at.inTag {
+			// Inside a tag HTML is only text: as in Go's html/template its
+			// tags are stripped and the rest is escaped like any string.
+			text = html.UnescapeString(stripTags(s))
+			s = html.EscapeString(text)
+		}
+	case HTMLAttr:
+		text = string(ss)
+		s = html.EscapeString(text)
+		if at.attrName {
+			s = text
+		}
 	default:
-		s = html.EscapeString(toString(v))
+		text = toString(v)
+		s = html.EscapeString(text)
+	}
+	if at.cssURL {
+		text = cssURLEscaper.Replace(text)
+		s = html.EscapeString(text)
+	}
+	if at.unquoted {
+		s = unquotedEscaper.Replace(text)
+	}
+	if _, vouched := v.(HTMLAttr); at.attrName && !vouched && !plainAttrName(text) {
+		s = ""
+	}
+	if at.afterLT && s != "" {
+		if c := s[0]; isASCIILetter(c) || c == '/' || c == '!' || c == '?' {
+			s = fmt.Sprintf("&#%d;", c) + s[1:]
+		}
 	}
 	if err := e.budget.wrote(len(s)); err != nil {
 		return err
