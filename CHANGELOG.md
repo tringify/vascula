@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.1
+
+- **Repository:** a new README, issue and pull request templates, and a code of conduct. The language and the Go API are unchanged.
+
 ## v1.0.0
 
 The first stable release of Vascula.

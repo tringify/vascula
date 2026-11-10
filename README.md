@@ -1,7 +1,48 @@
-# Vascula
+<p align="center">
+  <a href="https://vascula.dev"><img src=".github/assets/vascula-greenhouse.webp" width="100%" alt="Pixel-art greenhouse at night: glowing green vines connect a developer at a desk to products, a shop front, carts and parcels."></a>
+</p>
 
-Readable HTML templates with explicit data access, reusable components and
-bounded rendering. Vascula is a Go library with no third-party runtime dependencies.
+<h1 align="center">Vascula</h1>
+
+<p align="center">Safe, fast HTML templates for Go.</p>
+
+<p align="center">
+  <a href="https://vascula.dev">Documentation</a> ·
+  <a href="https://vascula.dev/getting-started">Getting started</a> ·
+  <a href="https://vascula.dev/tutorial">Tutorial</a> ·
+  <a href="https://vascula.dev/changelog">Changelog</a>
+</p>
+
+<p align="center">
+  <a href="https://pkg.go.dev/vascula.dev/vascula"><img src="https://pkg.go.dev/badge/vascula.dev/vascula.svg" alt="Go reference"></a>
+  <a href="https://github.com/tringify/vascula/actions/workflows/verify.yml"><img src="https://github.com/tringify/vascula/actions/workflows/verify.yml/badge.svg" alt="Verify"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-a6f87b" alt="MIT licence"></a>
+</p>
+
+Vascula is a template language for HTML and a Go library with no third-party
+dependencies. You write markup with `{{ output }}` and `{% tags %}`; your
+application compiles the template once and renders it with data.
+
+- **Safe by default.** Everything a template prints is HTML-escaped, and a
+  template cannot switch that off.
+- **Explicit about data.** A template reads only the data your application
+  allows; anything else is an error, not a silent blank.
+- **Bounded.** Compilation and rendering have limits, so a template cannot loop
+  forever or build a gigabyte string.
+- **Fast.** See the [benchmarks](https://vascula.dev/performance).
+- **Familiar.** If you know Liquid or Jinja you can already read it; see
+  [Coming from Liquid](https://vascula.dev/from-liquid).
+
+## Install
+
+```sh
+go get vascula.dev/vascula@latest
+```
+
+Use Go 1.25 or later. Vascula follows semantic versioning; read
+[the changelog](CHANGELOG.md) before upgrading.
+
+## A first template
 
 ```go
 tmpl, err := vascula.Compile(`<h1>{{ settings.title }}</h1>`)
@@ -13,15 +54,6 @@ output, err := tmpl.Render(vascula.Options{
 })
 // output: <h1>Tea &amp; coffee</h1>
 ```
-
-```sh
-go get vascula.dev/vascula@latest
-```
-
-The module is `vascula.dev/vascula`. Use Go 1.25 or later. Documentation:
-[vascula.dev](https://vascula.dev).
-Vascula follows semantic versioning; read [the changelog](CHANGELOG.md) before
-upgrading.
 
 ## Learn the language
 

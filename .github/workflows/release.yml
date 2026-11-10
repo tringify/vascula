@@ -31,5 +31,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
+          awk -v tag="## $RELEASE_TAG" '$0 == tag {on=1; next} /^## / {on=0} on' CHANGELOG.md > release-notes.md
+          test -s release-notes.md
           gh release create "$RELEASE_TAG" --verify-tag \
-            --title "Vascula $RELEASE_TAG" --notes-file CHANGELOG.md
+            --title "Vascula $RELEASE_TAG" --notes-file release-notes.md
