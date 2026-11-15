@@ -49,6 +49,21 @@ Converts to lower case.
 café au lait
 ```
 
+### slug
+
+Makes a URL- and attribute-safe name from text: letters and digits in lower
+case, in any script; every run of anything else becomes one dash, with none at
+either end. Use it for ids, class names and keys made from text a merchant
+can type.
+
+```vascula
+{{ "Summer Sale!" | slug }} {{ "  Café au lait  " | slug }}
+```
+
+```output
+summer-sale café-au-lait
+```
+
 ### capitalize
 
 Upper-cases the first character and lower-cases the rest.

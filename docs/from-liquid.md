@@ -62,7 +62,7 @@ These Liquid filters exist in Vascula with the same meaning: `abs`, `append`,
 `sum`, `times`, `truncate`, `truncatewords`, `uniq`, `upcase`, `url_decode`,
 `url_encode`, `where`.
 
-Vascula adds `json`.
+Vascula adds `json` and `slug` (use it for Shopify's `handleize` and `handle`).
 
 Not available: `raw`, `base64_*`,
 `url_escape`, `remove_last`, `replace_last`, `find`, `find_index`, `has`,
