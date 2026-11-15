@@ -92,6 +92,10 @@ type nameWalker struct {
 	// collection it goes over followed by "[]", or "" when it is not one.
 	paths     bool
 	loopPaths []string
+	// filters collects the filters the template calls (FilterNames).
+	filters    bool
+	filterSeen map[string]bool
+	filterOut  []NameUse
 }
 
 // loopPath returns the collection path a loop variable stands for, and
@@ -236,6 +240,11 @@ func (w *nameWalker) expr(ex expression) {
 	case filterExpr:
 		w.expr(x.base)
 		for _, call := range x.filters {
+			if w.filters && !w.filterSeen[call.name] {
+				w.filterSeen[call.name] = true
+				line, col := lineCol(w.src, call.pos)
+				w.filterOut = append(w.filterOut, NameUse{Name: call.name, Line: line, Col: col})
+			}
 			for _, arg := range call.args {
 				w.expr(arg)
 			}
@@ -256,4 +265,21 @@ func sortedKeys(m map[string]expression) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// FilterNames returns, in source order, every filter the template calls, with
+// the line and column of its first call. Every branch is visited. A host
+// compares them with the built-in filters (IsBuiltinFilter) and its own, and
+// refuses a template that calls an unknown filter at publish time, instead of
+// failing on the first render that reaches the call.
+func (t *Template) FilterNames() []NameUse {
+	w := nameWalker{src: t.src, bound: map[string]bool{}, seen: map[string]bool{}, filters: true, filterSeen: map[string]bool{}}
+	w.nodes(t.nodes)
+	return w.filterOut
+}
+
+// IsBuiltinFilter reports whether name is one of Vascula's own filters.
+func IsBuiltinFilter(name string) bool {
+	_, ok := builtinFilters()[name]
+	return ok
 }
