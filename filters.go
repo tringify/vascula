@@ -378,6 +378,10 @@ func builtinFilters() map[string]FilterFunc {
 		"url_encode": func(in interface{}, _ FilterArgs) (interface{}, error) {
 			return url.QueryEscape(toString(in)), nil
 		},
+		// slug makes a URL- and attribute-safe name from text: letters and digits
+		// in lower case (any script), everything else one dash, no dash at either end.
+		// "Summer Sale!" -> "summer-sale", "Cafe au lait" -> "cafe-au-lait".
+		"slug": strFilter(slugify),
 		"url_decode": func(in interface{}, _ FilterArgs) (interface{}, error) {
 			out, err := url.QueryUnescape(toString(in))
 			if err != nil {
@@ -600,6 +604,23 @@ func strftime(t time.Time, format string) string {
 			b.WriteRune('%')
 			b.WriteRune(runes[i])
 		}
+	}
+	return b.String()
+}
+
+func slugify(s string) string {
+	var b strings.Builder
+	dash := false
+	for _, r := range strings.ToLower(s) {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || unicode.Is(unicode.Mn, r) {
+			if dash && b.Len() > 0 {
+				b.WriteByte('-')
+			}
+			dash = false
+			b.WriteRune(r)
+			continue
+		}
+		dash = true
 	}
 	return b.String()
 }

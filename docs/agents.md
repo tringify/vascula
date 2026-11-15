@@ -81,7 +81,7 @@ Values: `"string"`, `'string'`, `42`, `-1.5`, `true`, `false`, `nil`,
 | HTML | `escape`, `escape_once`, `strip_html`, `newline_to_br` |
 | Numbers | `plus`, `minus`, `times`, `divided_by`, `modulo`, `round`, `ceil`, `floor`, `abs`, `at_least`, `at_most` |
 | Arrays | `join`, `first`, `last`, `map`, `where`, `sort`, `sort_natural`, `reverse`, `uniq`, `compact`, `concat`, `sum`, `slice`, `size` |
-| Other | `date`, `url_encode`, `url_decode`, `default` (named: `allow_false`), `json` |
+| Other | `date`, `url_encode`, `url_decode`, `slug`, `default` (named: `allow_false`), `json` |
 
 Applications add their own filters (for example `money`, `image_url`, `t`).
 Only use filters you know the application provides.
