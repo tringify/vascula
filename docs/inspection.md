@@ -147,6 +147,14 @@ card needs an allowance for shop
 Walk the tree from a page through `RenderTargets` of each child to find
 missing children and cycles before anything renders.
 
+## Filters used
+
+`FilterNames` lists every filter a template calls, with the line and column of
+its first call, visiting every branch. `IsBuiltinFilter(name)` says whether a
+name is one of Vascula's own filters. Compare the rest with the filters your
+application adds, and refuse a template that calls one that doesn't exist
+before it is published.
+
 ## Features used
 
 `UsesForm` reports whether a template contains `{% form %}`, and
