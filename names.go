@@ -283,3 +283,16 @@ func IsBuiltinFilter(name string) bool {
 	_, ok := builtinFilters()[name]
 	return ok
 }
+
+// BuiltinFilters returns the names of Vascula's own filters, sorted. A host
+// can publish them with its own filters, for example to an editor that offers
+// completion for every filter a template may call.
+func BuiltinFilters() []string {
+	filters := builtinFilters()
+	names := make([]string, 0, len(filters))
+	for name := range filters {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
