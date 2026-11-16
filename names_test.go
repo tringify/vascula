@@ -52,3 +52,32 @@ func TestRenderArguments(t *testing.T) {
 		t.Errorf("got %v", got)
 	}
 }
+
+// BuiltinFilters lists exactly the filters IsBuiltinFilter accepts, sorted,
+// so a host can publish the whole set.
+func TestBuiltinFilters(t *testing.T) {
+	names := BuiltinFilters()
+	if len(names) != len(builtinFilters()) {
+		t.Fatalf("BuiltinFilters has %d names, the engine %d filters", len(names), len(builtinFilters()))
+	}
+	for i, name := range names {
+		if !IsBuiltinFilter(name) {
+			t.Errorf("%q is listed but IsBuiltinFilter refuses it", name)
+		}
+		if i > 0 && names[i-1] >= name {
+			t.Errorf("not sorted at %q", name)
+		}
+	}
+	for _, name := range []string{"slug", "upcase", "where"} {
+		if !IsBuiltinFilter(name) {
+			t.Errorf("IsBuiltinFilter(%q) = false", name)
+		}
+	}
+	if IsBuiltinFilter("money") {
+		t.Error("money is a host filter, not a built-in one")
+	}
+	names[0] = "changed"
+	if BuiltinFilters()[0] == "changed" {
+		t.Error("BuiltinFilters returned shared state")
+	}
+}
