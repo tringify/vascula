@@ -110,8 +110,10 @@ silently swallows the rest of the template.
 
 ## Names
 
-Names are made of letters, digits and underscores and start with a letter or
-underscore: `product`, `item_count`, `_draft`. Names are case-sensitive.
+Names start with a letter or underscore and continue with letters, digits,
+underscores and hyphens: `product`, `item_count`, `_draft`, `sale-items`.
+Names are case-sensitive. Use ASCII letters. A hyphen is part of the name, so
+`a-b` is one name, not `a` minus `b`.
 
 ## Text is never evaluated
 

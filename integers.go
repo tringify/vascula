@@ -7,7 +7,7 @@ import (
 
 // Integers stay exact. Literals without a fractional part are int64, and
 // arithmetic between two integers stays int64 unless it would overflow, when
-// it falls back to float64 as before. Anything involving a float is float64.
+// it falls back to float64. Anything involving a float is float64.
 // Output text is identical either way: an integral float prints without ".0".
 
 // maxSafeInteger is the largest magnitude a float64 holds exactly.
@@ -81,7 +81,7 @@ func dividedBy(in interface{}, args FilterArgs) (interface{}, error) {
 		if y == 0 {
 			return nil, fmt.Errorf("divided_by: division by zero")
 		}
-		// Division keeps its fractional result: 10 / 4 is 2.5, as before.
+		// Division keeps its fractional result: 10 / 4 is 2.5.
 		if x%y == 0 && !(x == math.MinInt64 && y == -1) {
 			return x / y, nil
 		}
@@ -142,7 +142,7 @@ func absolute(in interface{}, _ FilterArgs) (interface{}, error) {
 }
 
 // hostValue hands a host filter the documented JSON shape: an integer a
-// float64 holds exactly arrives as float64, as it always has. Larger integers
+// float64 holds exactly arrives as float64. Larger integers
 // stay int64 rather than arriving rounded.
 func hostValue(v interface{}) interface{} {
 	if x, ok := toInt64(v); ok && x <= maxSafeInteger && x >= -maxSafeInteger {

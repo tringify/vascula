@@ -357,7 +357,7 @@ func (e *evalCtx) renderCase(n caseNode) error {
 // composition tree is bounded as one unit.
 func (e *evalCtx) renderChild(n renderNode) error {
 	if e.resolve == nil {
-		return fmt.Errorf("{%% render %%} unavailable: no child resolver wired")
+		return fmt.Errorf("{%% render %%} unavailable: Options.Resolve is not set")
 	}
 	if e.depth >= maxRenderDepth {
 		return fmt.Errorf("{%% render %%} nesting too deep (>%d): recursive composition?", maxRenderDepth)
@@ -380,7 +380,7 @@ func (e *evalCtx) renderChild(n renderNode) error {
 	allowed := make(map[string]bool, len(child.Allow))
 	for _, a := range child.Allow {
 		if i := strings.IndexByte(a, '.'); i >= 0 {
-			a = a[:i] // dotted need grants the root (tier hint, not scope)
+			a = a[:i] // a dotted allowance grants its whole root
 		}
 		allowed[a] = true
 	}
@@ -689,9 +689,6 @@ func (e *evalCtx) evalExpr(ex expression) (interface{}, error) {
 	}
 }
 
-// resolveVar is the access-control boundary. The first path segment must be a
-// local OR an allowed data root; anything else is a hard error
-// (declare-then-resolve), not a silent empty. A missing sub-path IS nil.
 // renderForm emits a POST form using the definition bound at compilation.
 // The token is read directly from the host-selected context key; it is not
 // exposed to ordinary template expressions unless the host grants that key.
@@ -753,6 +750,9 @@ func (e *evalCtx) renderForm(x formNode) error {
 	return e.write(safeString("</form>"))
 }
 
+// resolveVar is the access-control boundary. The first path segment must be a
+// local OR an allowed data root; anything else is a hard error
+// (declare-then-resolve), not a silent empty. A missing sub-path IS nil.
 func (e *evalCtx) resolveVar(v varExpr) (interface{}, error) {
 	root := v.segs[0].name
 	var cur interface{}

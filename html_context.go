@@ -14,7 +14,7 @@ import (
 //   - Inside a tag (an attribute value), the json filter's output is
 //     HTML-escaped on write: its quotes would end an attribute value. There
 //     `{{ x | json }}` is as safe as `{{ x | json | escape }}`, which renders
-//     exactly as before. In <script> json stays raw; its encoder escapes <, >
+//     the same output. In <script> json stays raw; its encoder escapes <, >
 //     and &.
 //   - In an unquoted attribute value, every character that would end the value
 //     or start another attribute is escaped as well (see unquotedEscaper).

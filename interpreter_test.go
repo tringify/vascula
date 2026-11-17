@@ -147,7 +147,7 @@ func TestParseErrors(t *testing.T) {
 func TestAssignmentsOutliveTheirBlock(t *testing.T) {
 	opts := Options{Settings: map[string]interface{}{"on": true, "items": []interface{}{"a", "b", "c"}}}
 	// Loop variables stay local to their loop: reading one afterwards is an
-	// unknown name, as it always was.
+	// unknown name.
 	tmpl, _ := Compile(`{% for i in settings.items %}{% endfor %}{{ i }}`)
 	if _, err := tmpl.Render(opts); err == nil {
 		t.Error("a loop variable outlived its loop")

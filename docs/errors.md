@@ -151,7 +151,8 @@ attributes the application controls (`action`, `method`, `enctype`). See
 
 ### compile budget exceeded
 
-The source is larger, or nests deeper, than the compilation limits allow. See
+The source is too large, has too many tokens, or nests too deeply for the
+compilation limits. See
 [Safety and limits](/safety#compilation-limits).
 
 ## Render errors
@@ -244,7 +245,8 @@ its caller's loop.
 ### {% render %} ...
 
 A child could not be rendered. The message continues with the reason: the
-application's resolver refused the name, the child failed (with its own
+application did not set a resolver (`Options.Resolve` in Go), the resolver
+refused the name or returned no template, the child failed (with its own
 message and position), or children nested more than 32 levels deep, which
 usually means a template renders itself.
 
@@ -255,17 +257,22 @@ The application must supply it.
 
 ### render budget exceeded: ...
 
-The render reached one of the [rendering limits](/safety#rendering-limits):
+The render reached one of the [rendering limits](/safety#rendering-limits).
+The reason follows `render budget exceeded:`; `too many steps` and
+`output too large` also give the limit in parentheses:
 
-| Message ends with | Meaning |
+| Reason | Meaning |
 |---|---|
 | `too many steps` | Too much work: usually nested loops over large collections. |
 | `output too large` | The page would exceed the output limit. |
 | `value too large` | One value has more text than allowed. |
 | `too many value nodes` | One value has too many items. |
+| `too many collection entries` | A loop's collection has too many items. |
 | `value nesting too deep` | A value is nested more than 64 levels. |
 | `range too large` | A range has more items than allowed. |
 | `expression too deep` | An expression nests more than 256 levels. |
+| `replacement too large` | `replace` or `replace_first` would make text larger than allowed. |
+| `concatenated collection too large` | `concat` would make an array with too many items. |
 
 Reduce the data or the work; raise a limit only if a real template needs it.
 

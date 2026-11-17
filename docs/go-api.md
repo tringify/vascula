@@ -324,9 +324,28 @@ Use it in host code that reads template data directly: a host tag's
 | `UsesTag(name string) bool` | Whether the template contains the host tag `name`. |
 | `ExternalNames(globals ...string) []NameUse` | Every root name the template reads without defining it, excluding the given globals, with the position of its first use. |
 | `ExternalPaths(globals ...string) []NameUse` | Every distinct path the template reads from names it does not define, such as `order.number`, with the position of its first use. |
+| `FilterNames() []NameUse` | Every filter the template calls, in source order, with the position of its first call. |
 
 All of them visit every branch, including ones that may not run. See
 [Inspection](/inspection) for how to use them together.
+
+### func IsBuiltinFilter
+
+```go
+func IsBuiltinFilter(name string) bool
+```
+
+Reports whether `name` is one of Vascula's own filters.
+
+### func BuiltinFilters
+
+```go
+func BuiltinFilters() []string
+```
+
+Returns the names of Vascula's own filters, sorted. Compare `FilterNames`
+with these and your application's filters to refuse a template that calls a
+filter that does not exist before it is published.
 
 ### type NameUse
 
@@ -337,8 +356,8 @@ type NameUse struct {
 }
 ```
 
-`Name` is a root name from `ExternalNames` and a dotted path from
-`ExternalPaths`.
+`Name` is a root name from `ExternalNames`, a dotted path from
+`ExternalPaths` and a filter name from `FilterNames`.
 
 ## Errors
 

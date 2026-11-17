@@ -79,11 +79,12 @@ path         = name { "." name | "[" expression "]" } ;
 ## Tokens
 
 ```text
-name         = ( letter | "_" ) { letter | digit | "_" } ;
+name         = ( letter | "_" ) { letter | digit | "_" | "-" } ;
 string       = '"' { character | "\" character } '"'
              | "'" { character | "\" character } "'" ;
 number       = [ "-" ] digit { digit } [ "." digit { digit } ] ;
 ```
 
-A backslash in a string takes the next character literally. A number without
+`letter` is an ASCII letter. A hyphen inside a name is part of the name, so
+`a-b` is one name. A backslash in a string takes the next character literally. A number without
 a decimal point is an integer.

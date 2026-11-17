@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **Filters:** the `slug` filter makes a URL- and attribute-safe name from text.
+- **Inspection:** `Template.FilterNames` lists every filter a template calls,
+  with the position of its first call; `IsBuiltinFilter` and `BuiltinFilters`
+  identify Vascula's own filters.
+
 ## v1.0.1
 
 - **Repository:** a new README, issue and pull request templates, and a code of conduct. The language and the Go API are unchanged.

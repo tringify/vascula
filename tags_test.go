@@ -125,7 +125,6 @@ func TestArrayFilters(t *testing.T) {
 		`{{ items | where: "on" | size }}`:                    "2",
 		`{{ items | where: "name", "a" | size }}`:             "1",
 		`{{ items | sort: "name" | map: "name" | join: "" }}`: "abc",
-		`{{ items | sort: "n" | first | fetchless }}`:         "", // placeholder replaced below
 		`{{ dupes | uniq | join: "" }}`:                       "xy",
 		`{{ dupes | concat: holes | size }}`:                  "6",
 		`{{ holes | compact | size }}`:                        "2",
@@ -134,7 +133,6 @@ func TestArrayFilters(t *testing.T) {
 		`{{ csv | split: "," | slice: 1, 2 | join: "" }}`:     "bc",
 		`{{ csv | split: "," | slice: -1 | join: "" }}`:       "c",
 	}
-	delete(cases, `{{ items | sort: "n" | first | fetchless }}`)
 	for tpl, want := range cases {
 		if got := lpRender(t, tpl, ctx); got != want {
 			t.Fatalf("%s: want %q got %q", tpl, want, got)

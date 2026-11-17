@@ -11,9 +11,10 @@ A filter transforms the value on its left: `{{ value | filter: argument }}`.
 See [Expressions](/expressions#filters) for how chaining and arguments work.
 
 Filters convert their input as needed: string filters treat a number as its
-printed text, number filters read a numeric string as a number, and array
-filters treat `nil` as an empty array. A filter that cannot work with its
-arguments fails with an error that names it.
+printed text, number filters read a numeric string as a number and treat any
+other value (other text, `nil`, `true`, an array) as 0, and array filters
+treat `nil` as an empty array. A filter that fails, such as `divided_by: 0`,
+stops the render with an error that names it.
 
 Applications add their own filters. Three built-ins can never be replaced by
 an application: `escape`, `json` and `default`, because they define how output
@@ -276,7 +277,8 @@ line one<br>&lt;line two&gt;
 
 ## Numbers
 
-Number filters read numbers and numeric strings. Two integers give an exact
+Number filters read numbers and numeric strings; any other value counts as 0,
+so `{{ "abc" | plus: 1 }}` prints `1`. Two integers give an exact
 integer result (falling back to a decimal on 64-bit overflow); anything with a
 decimal gives a decimal.
 

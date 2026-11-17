@@ -55,9 +55,9 @@ func TestJSONStaysRawOutsideTags(t *testing.T) {
 	}
 }
 
-// Templates already write `| json | escape` in attributes; that output must not
-// change (escape yields escaped HTML, which is never escaped twice).
-func TestJSONEscapeInAttributeRendersAsBefore(t *testing.T) {
+// In an attribute, `| json | escape` prints the same as `| json`: escape yields
+// escaped HTML, which is never escaped twice.
+func TestJSONEscapeInAttributeEscapesOnce(t *testing.T) {
 	a := renderJSON(t, `<div data-x="{{ settings.x | json | escape }}">`)
 	b := renderJSON(t, `<div data-x="{{ settings.x | json }}">`)
 	if a != b {

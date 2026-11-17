@@ -48,8 +48,8 @@ func TestNamedFilterArgs(t *testing.T) {
 	}
 }
 
-// TestPositionalFiltersUnchanged proves the existing positional path is untouched
-// by the FilterArgs refactor (backward compatibility).
+// TestPositionalFiltersUnchanged checks that positional filter arguments are
+// delivered in order.
 func TestPositionalFiltersUnchanged(t *testing.T) {
 	if got := render(t, `{{ "hello" | truncate: 4, ".." }}`, Options{}); got != "he.." {
 		t.Fatalf("positional truncate broke: %q", got)
@@ -60,8 +60,7 @@ func TestPositionalFiltersUnchanged(t *testing.T) {
 }
 
 // TestDefaultAllowFalse proves a builtin (default) reads a named arg: with
-// allow_false:true an explicit false is kept rather than replaced by the fallback
-// rather than replaced by the fallback.
+// allow_false:true an explicit false is kept rather than replaced by the fallback.
 func TestDefaultAllowFalse(t *testing.T) {
 	o := Options{Settings: map[string]interface{}{"flag": false}}
 	// without allow_false, false falls through to the fallback

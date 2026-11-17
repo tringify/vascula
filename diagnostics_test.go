@@ -25,8 +25,8 @@ func TestCompileErrorsNameLineAndColumn(t *testing.T) {
 	}
 }
 
-// positions_test.go pins that RUNTIME errors carry a source position (line:col), so template authors can find their mistakes.
-// Parse errors already had offsets; these are the eval-time errors.
+// The tests below pin that RUNTIME errors carry a source position (line:col), so template authors
+// can find their mistakes.
 
 func wantErrAt(t *testing.T, src string, opts Options, line, col int, substr string) {
 	t.Helper()

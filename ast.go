@@ -54,8 +54,6 @@ type assignNode struct {
 	expr expression
 }
 
-// renderNode renders a child template in its OWN scope (no leakage from the
-// caller), passing named args as locals.
 // hostTagNode is a host-declared tag; arg is nil when none was written.
 type hostTagNode struct {
 	name string
@@ -71,14 +69,16 @@ type formNode struct {
 	pos        int
 }
 
+// renderNode renders a child template in its own scope (no leakage from the
+// caller), passing named args as locals.
 type renderNode struct {
 	target expression
 	args   map[string]expression
 	pos    int
 }
 
-// (slot is rejected at COMPILE time — see parser.go — so there is no slotNode in the AST. It returns
-// when composition children are wired.)
+// {% slot %} is reserved and rejected at compile time (see parser.go), so the
+// AST has no slot node.
 
 // caseNode is {% case %}/{% when %}/{% else %}. Each when may list several
 // values (comma or `or` separated) — the first branch containing a value equal

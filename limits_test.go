@@ -219,7 +219,7 @@ func TestSequenceLoopStillBoundsCollectionWork(t *testing.T) {
 	}
 }
 
-// The value walk is cached per render . These pin that caching changes
+// The value walk is cached per render. These pin that caching changes
 // only speed: every limit and the step charge stay what a fresh walk gives.
 
 func TestCachedValuesStillChargeTheirSteps(t *testing.T) {

@@ -84,8 +84,10 @@ a &lt; b | a &lt; b &amp; c
 ```
 
 Vascula decides which case applies by reading the literal markup of the
-template in source order. If a tag is opened in one branch of an `if` and
-closed in another, it reads them in the order written.
+template at compile time. It follows control flow, so every branch of an `if`
+must end in the same place in the markup; a branch that opens a tag or
+attribute value that another branch does not fails to compile (see
+[Where output can stand in a tag](#where-output-can-stand-in-a-tag)).
 
 ## Trusted HTML comes only from the application
 

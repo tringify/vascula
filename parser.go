@@ -93,7 +93,7 @@ func (p *parser) parseBlock(stops map[string]bool) ([]node, string, error) {
 			if err != nil {
 				return nil, "", err
 			}
-			if n != nil { // comment already consumed by the lexer; nil-safe
+			if n != nil { // defensive: parseTag returns a node or an error
 				out = append(out, n)
 			}
 		default:
@@ -532,8 +532,8 @@ func (p *parser) parseRender() (node, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Render targets must be literal strings — the static render-target closure (data needs across the
-	// render tree) is computed at compile time, so a dynamic target is rejected HERE, not at render.
+	// Render targets must be literal strings so a host can inspect the whole composition tree
+	// (RenderTargets, RenderArguments) before rendering; a dynamic target is rejected HERE, not at render.
 	if _, ok := literalString(comp); !ok {
 		return nil, atOffset(p.peek().pos, "{%% render %%} requires a literal template name (dynamic targets are not allowed)")
 	}
@@ -566,9 +566,9 @@ func (p *parser) parseRender() (node, error) {
 }
 
 // parseForm parses {% form "action_kind" [, attr: expr ...] %} body {% endform %}. The kind is
-// LITERAL-ONLY and validated against the host form profile at COMPILE time — an unknown action
-// fails review, never a live render. The tag emits the <form> element with the action path and
-// the session CSRF token; the author writes only the inputs that matter.
+// LITERAL-ONLY and validated against CompileOptions.Forms at COMPILE time — an unknown action
+// fails compilation, never a render. The tag emits the <form> element with the action path and
+// the token read from the definition's context key; the author writes only the inputs that matter.
 func (p *parser) parseForm() (node, error) {
 	open := p.openPos
 	kindExpr, err := p.parsePrimary()
@@ -637,8 +637,8 @@ func (p *parser) parseForm() (node, error) {
 // everywhere an expression appears (output, assign, if/unless conditions, for limit/offset, render args)
 // and `s | upcase == 'HI'` means `(s | upcase) == 'HI'`. NOTE: a filter only ever applies to the operand
 // immediately to its left — there is NO way to filter a whole comparison result (`a == b | f` filters b,
-// then compares; it does NOT filter `(a == b)`). The trailing parseFilters here only fires when the
-// expression is a single operand with no comparison (e.g. `{{ settings.x | upcase }}`).
+// then compares; it does NOT filter `(a == b)`). parseOperand already consumes every `|` that follows
+// an operand, so the trailing parseFilters here never finds a pipe; it is a no-op kept as a guard.
 func (p *parser) parseExpr() (expression, error) {
 	if err := p.enter(); err != nil {
 		return nil, err

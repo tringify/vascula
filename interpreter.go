@@ -142,9 +142,8 @@ func (t *Template) Render(opts Options) (string, error) {
 	}
 	allowed := make(map[string]bool, len(opts.Allow))
 	for _, a := range opts.Allow {
-		// A dotted need ("cart.item_count") grants its ROOT namespace — the dot
-		// suffix is a host enrichment tier hint (cheap vs rich), not a narrower
-		// access scope; the host only builds the tier the needs asked for.
+		// A dotted allowance ("cart.item_count") grants its whole root
+		// namespace ("cart"); Vascula does not enforce field-level access.
 		if i := strings.IndexByte(a, '.'); i >= 0 {
 			a = a[:i]
 		}

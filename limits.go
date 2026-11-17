@@ -95,8 +95,8 @@ func (b *budget) value(value interface{}) error {
 					if seen.bytes > b.maxValueBytes-bytes {
 						return 0, fmt.Errorf("render budget exceeded: value too large")
 					}
-					// Charge the walk's steps without repeating it, so the
-					// render budget bounds work exactly as before.
+					// Charge the walk's steps without repeating it, so a
+					// reused value costs the same budget as walking it again.
 					if err := b.spend(seen.steps); err != nil {
 						return 0, err
 					}
@@ -203,8 +203,8 @@ func (b *budget) value(value interface{}) error {
 					if seen.bytes > b.maxValueBytes-bytes {
 						return 0, fmt.Errorf("render budget exceeded: value too large")
 					}
-					// Charge the walk's steps without repeating it, so the
-					// render budget bounds work exactly as before.
+					// Charge the walk's steps without repeating it, so a
+					// reused value costs the same budget as walking it again.
 					if err := b.spend(seen.steps); err != nil {
 						return 0, err
 					}

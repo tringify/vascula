@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// coverage_test.go is the comprehensive behavior lock for the interpreter: every filter, every access
+// These tests are the comprehensive behavior lock for the interpreter: every filter, every access
 // rule, escaping, the render budget, render scope, whitespace control, forloop vars, operators, and the
 // value semantics. Each expectation is the ACTUAL engine behavior — these pin it so it cannot drift.
 
@@ -294,9 +294,9 @@ func TestRenderChildScope(t *testing.T) {
 	if _, err := renderErr("{% render 'c' %}", Options{Data: m("product", m("title", "x")), Allow: []string{"product"}, Resolve: resolve2}); err == nil {
 		t.Fatal("child must NOT inherit the caller's allowed roots")
 	}
-	// no resolver wired → render errors
-	if _, err := renderErr("{% render 'c' %}", Options{}); err == nil {
-		t.Fatal("render with no resolver must error")
+	// Options.Resolve not set → render errors
+	if _, err := renderErr("{% render 'c' %}", Options{}); err == nil || !strings.Contains(err.Error(), "Options.Resolve is not set") {
+		t.Fatalf("render without Options.Resolve must error; got %v", err)
 	}
 }
 
@@ -353,8 +353,8 @@ func TestProtectedFiltersNotOverridable(t *testing.T) {
 	}
 }
 
-// --- raw is REMOVED: rejected at compile, no escape hatch; SafeHTML is host-only ---
-func TestRawRemoved(t *testing.T) {
+// --- raw is not available: rejected at compile, no escape hatch; SafeHTML is host-only ---
+func TestRawUnavailable(t *testing.T) {
 	// raw rejected at COMPILE
 	if err := mustCompileErr("{{ settings.x | raw }}"); err == nil || !strings.Contains(err.Error(), "'raw' filter is not available") {
 		t.Fatalf("raw must be rejected at compile; got %v", err)
@@ -377,7 +377,7 @@ func TestRawRemoved(t *testing.T) {
 	}
 }
 
-// --- end-tag scan respects word boundaries (now for comment, raw is gone) ---
+// --- the {% endcomment %} scan respects word boundaries ---
 func TestEndTagBoundary(t *testing.T) {
 	// {% endcommentary %} must NOT close {% comment %}; the comment body runs to the real {% endcomment %}.
 	out := render(t, "a{% comment %} x {% endcommentary %} y {% endcomment %}b", Options{})
@@ -398,13 +398,13 @@ func TestNilSizeIsZero(t *testing.T) {
 	if out != "0" {
 		t.Fatalf("missing.size should be 0; got %q", out)
 	}
-	// but a genuine nil > number (no .size) still errors — the #7 guard is intact
+	// but a genuine nil > number (no .size) still errors
 	if _, err := renderErr("{% if settings.x > 0 %}Y{% endif %}", Options{Settings: m("x", nil)}); err == nil {
 		t.Fatal("nil > number (without .size) must still error")
 	}
 }
 
-// correctness_test.go pins the engine's behavior in cases that are easy to get wrong.
+// The tests below pin the engine's behavior in cases that are easy to get wrong.
 
 // renderErr renders and returns (output, error) without t.Fatal, for tests that assert an error.
 func renderErr(src string, opts Options) (string, error) {
@@ -630,10 +630,10 @@ func TestDivideByZeroErrors(t *testing.T) {
 	}
 }
 
-// --- slot is rejected at COMPILE time (not wired) ---
+// --- slot is reserved and rejected at COMPILE time ---
 func TestSlotRejectedAtCompile(t *testing.T) {
 	if err := mustCompileErr("{% slot 'main' %}"); err == nil {
-		t.Fatal("slot must be rejected at compile (not wired)")
+		t.Fatal("slot must be rejected at compile")
 	}
 }
 
@@ -658,7 +658,7 @@ func TestMapIteration(t *testing.T) {
 	if out != "k=v" {
 		t.Fatalf("map iteration should yield [key,value]; got %q", out)
 	}
-	// non-empty map → loop runs (was silently empty before)
+	// non-empty map → loop runs
 	out = render(t, "{% for kv in settings.m %}X{% else %}EMPTY{% endfor %}",
 		Options{Settings: map[string]interface{}{"m": m}})
 	if out == "EMPTY" {
@@ -691,7 +691,7 @@ func TestCrossTypeComparisonErrors(t *testing.T) {
 	if out != "Y" {
 		t.Fatalf("string < string must work; got %q", out)
 	}
-	// == stays loose (numeric/string coercion) — NOT affected by #7
+	// == stays loose (numeric/string coercion), unlike < and >
 	out = render(t, "{% if settings.x == 5 %}Y{% endif %}", Options{Settings: map[string]interface{}{"x": "5"}})
 	if out != "Y" {
 		t.Fatalf("loose == should still coerce; got %q", out)
@@ -700,7 +700,7 @@ func TestCrossTypeComparisonErrors(t *testing.T) {
 
 // A typed-nil map/slice in an interface must be FALSY: hosts build data values
 // via helpers returning map[string]interface{} — absent data comes through as
-// a typed nil, and {% if product.price %} must guard it (the AED listing 500).
+// a typed nil, and {% if product.price %} must guard it.
 func TestTypedNilFalsy(t *testing.T) {
 	tmpl, err := compileFixture(`{% if price %}{{ price.current | upcase }}{% else %}none{% endif %}`)
 	if err != nil {

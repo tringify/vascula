@@ -108,8 +108,8 @@ func TestDataImageOnlyInImageSources(t *testing.T) {
 }
 
 // Only the value that starts the URL picks its scheme; later parts are
-// paths, queries and fragments and render as before.
-func TestURLAttributeLaterPartsRenderAsBefore(t *testing.T) {
+// paths, queries and fragments and render as ordinary escaped text.
+func TestURLAttributeLaterPartsRenderEscaped(t *testing.T) {
 	for src, want := range map[string]string{
 		`<a href="/search?q={{ settings.link }}">`:         `<a href="/search?q=javascript:alert(1)">`,
 		`<a href="https://x.example/{{ settings.link }}">`: `<a href="https://x.example/javascript:alert(1)">`,
@@ -370,8 +370,8 @@ func TestPrintedAttributesAreHostMarkupOrPlainNames(t *testing.T) {
 }
 
 // A name is never split across control flow: whatever the branches, the
-// attribute a value belongs to is the one the scan sees. These are the forms
-// that once printed javascript: into an unchecked href.
+// attribute a value belongs to is the one the scan sees. Each of these forms
+// would otherwise let a printed value put javascript: into an unchecked href.
 func TestNamesSplitByControlFlowFailToCompile(t *testing.T) {
 	for _, src := range []string{
 		`<a {% if settings.c %}h{% endif %}ref="{{ settings.link }}">`,

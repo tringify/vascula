@@ -75,8 +75,9 @@ readable as `settings`; `Globals` adds further names every template can read.
 Use `Resolve` to supply child templates, `Filters` for trusted filters,
 `CompileOptions.Forms` and `CompileOptions.Tags` to declare form kinds and host
 tags, and `CompileOptions.Reserved` for names templates may not assign.
-`ExternalNames`, `ExternalPaths`, `RenderTargets`, `RenderArguments`, `UsesForm` and `UsesTag`
-support inspection before rendering.
+`ExternalNames`, `ExternalPaths`, `FilterNames`, `RenderTargets`, `RenderArguments`, `UsesForm`
+and `UsesTag` support inspection before rendering; `IsBuiltinFilter` and `BuiltinFilters`
+identify Vascula's own filters.
 
 Vascula does not supply a commerce API, identity system, route table, theme bundle
 format or editor schema. Those are responsibilities of the embedding application.
@@ -106,7 +107,8 @@ go test -run '^$' -fuzz FuzzCompileAndRender -fuzztime 30s .
 
 Verification checks formatting, vets the packages, runs the race detector and
 executes documentation examples. It requires an installed Go toolchain and Python
-3.10 or later for the standalone-consumer and release checks. No credentials or
+3.7 or later, which builds and runs the Go examples in `docs/` as a separate module
+that depends on this one and compares their output. No credentials or
 external services are needed. See [Contributing](CONTRIBUTING.md).
 
 ## Licence

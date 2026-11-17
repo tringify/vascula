@@ -32,17 +32,16 @@ const (
 	tLt     // <
 	tGte    // >=
 	tLte    // <=
-	tAssign // = (in assign / named args)
+	tAssign // = (in assign)
 	tLParen // (
 	tRParen // )
 	tRange  // ..
 )
 
 type token struct {
-	typ  tokenType
-	val  string
-	pos  int  // byte offset, for error messages
-	trim bool // whitespace-control marker on the closing side ({{- / -}} / {%- / -%})
+	typ tokenType
+	val string
+	pos int // byte offset, for error messages
 }
 
 func (t token) String() string { return describeToken(t) }
@@ -75,11 +74,8 @@ func describeToken(t token) string {
 	return t.typ.String()
 }
 
-// lex tokenizes src with the default token limit. The parser checks grammar.
-func lex(src string) ([]token, error) {
-	return lexWithLimit(src, defaultMaxTokens)
-}
-
+// lexWithLimit tokenizes src, failing once it produces more than maxTokens
+// tokens. The parser checks grammar.
 func lexWithLimit(src string, maxTokens int) ([]token, error) {
 	l := &lexer{src: src, maxTokens: maxTokens}
 	if err := l.run(); err != nil {
@@ -92,7 +88,7 @@ type lexer struct {
 	src             string
 	pos             int
 	tokens          []token
-	pendingLeftTrim bool // set by -}} / -%%}; trims the next TEXT token's left side
+	pendingLeftTrim bool // set by -}} / -%} / -#}; trims the next TEXT token's left side
 	maxTokens       int
 	err             error
 }
@@ -238,8 +234,8 @@ func (l *lexer) lexInner(closeSeq string, closeTok tokenType) error {
 	}
 }
 
-// trimFollowingText flags that the next TEXT token should be left-trimmed. We
-// record intent by stashing a sentinel; applied when the next text is emitted.
+// trimFollowingText flags that the next TEXT token should be left-trimmed;
+// emitText applies the trim when that text is emitted. The argument is unused.
 func (l *lexer) trimFollowingText(_ bool) { l.pendingLeftTrim = true }
 
 func (l *lexer) lexToken() error {
@@ -374,9 +370,9 @@ func (l *lexer) lexIdent() error {
 // maybeComment handles {% comment %}...{% endcomment %}: its body is not tokenized. Returns true if it
 // consumed a full block (including the closing tag).
 //
-// {% raw %} is REJECTED here at compile: like the `raw` filter, a raw block is an author-facing way to
+// {% raw %} is rejected here at compile time: like the `raw` filter, a raw block is an author-facing way to
 // emit literal markup outside the auto-escape contract. There is no author escape hatch — trusted HTML
-// enters only as host-vouched SafeHTML. (comment stays: it hides its body, it does not emit markup.)
+// enters only as host-vouched SafeHTML. {% comment %} is allowed: it hides its body and emits nothing.
 func (l *lexer) maybeComment() (bool, error) {
 	save := l.pos
 	l.skipSpaces()
@@ -458,7 +454,8 @@ func indexEndTag(s, endWord string) int {
 		trimmed := strings.TrimLeft(inner, "-")
 		trimmed = strings.TrimLeft(trimmed, " \t\r\n")
 		// Require a WORD BOUNDARY after the keyword so {% endcommentary %} doesn't match endcomment — the next
-		// char must end the identifier (whitespace, %, -, or end of string), not an ident char.
+		// char must not be an identifier character (see isIdentPart). `-` is one, so {% endcomment-%} does
+		// not end the block; {% endcomment -%} does.
 		if strings.HasPrefix(trimmed, endWord) {
 			rest := trimmed[len(endWord):]
 			if rest == "" || !isIdentPart(rest[0]) {
