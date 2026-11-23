@@ -387,6 +387,7 @@ type OutputSpan struct {
 	Path       []string
 	RootValue  interface{}
 	Start, End int
+	Markup     bool
 }
 ```
 
@@ -396,6 +397,9 @@ value it came from. `Start` and `End` are byte offsets in the returned string;
 `Path` identifies the variable and `RootValue` identifies its current root object.
 A variable printed through a single `default` filter counts when its own value,
 not the fallback, is printed.
+A variable printed through a single `emphasize` filter counts too: its text is
+printed with `<em>` elements added around the emphasised words, and `Markup` is
+true, so an editor can treat the span's text content as the value.
 Treat the root as read-only and do not retain it after the render. The observer
 does not change rendered bytes. Outputs in attributes, scripts/styles, textarea
 and title elements, captures, child renders and filtered expressions are excluded.

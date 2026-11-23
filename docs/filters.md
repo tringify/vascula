@@ -275,6 +275,27 @@ Escapes the text and replaces each line break with `<br>`.
 line one<br>&lt;line two&gt;
 ```
 
+### emphasize
+
+Escapes the text and wraps the listed words in `<em>`, for a heading with one
+word in italics. List the words in one string, separated by spaces or commas,
+or pass an array. Each word matches as a whole word, ignoring case, in any
+language; in scripts written without spaces between words (such as Chinese,
+Japanese or Thai) it matches wherever it appears. Emphasised words with only
+spaces between them share one `<em>`. Nothing else about the text changes.
+
+```vascula
+{{ settings.heading | emphasize: settings.emphasis }}
+```
+
+```json data
+{"settings": {"heading": "The new <stuff> is New", "emphasis": "new"}}
+```
+
+```output
+The <em>new</em> &lt;stuff&gt; is <em>New</em>
+```
+
 ## Numbers
 
 Number filters read numbers and numeric strings; any other value counts as 0,

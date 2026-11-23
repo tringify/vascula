@@ -81,13 +81,18 @@ const maxRenderDepth = 32
 
 // OutputSpan identifies a direct variable output in HTML text. Byte offsets
 // refer to the final returned string. A variable with a single default filter
-// counts when its own value is printed. Other filtered expressions, attributes,
-// raw-text elements, captures and child renders are excluded. RootValue is read-only.
+// counts when its own value is printed, and so does a variable with a single
+// emphasize filter: its text is printed with <em> elements added, and Markup is
+// true. Other filtered expressions, attributes, raw-text elements, captures and
+// child renders are excluded. RootValue is read-only.
 // Observers must not retain or mutate host data. No callback runs unless opted in.
 type OutputSpan struct {
 	Path       []string
 	RootValue  interface{}
 	Start, End int
+	// Markup is true when the span holds <em> elements the emphasize filter
+	// added around parts of the text; the span's text is still the value's.
+	Markup bool
 }
 
 // Options configures a single render.

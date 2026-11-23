@@ -99,6 +99,9 @@ func builtinFilters() map[string]FilterFunc {
 		"lstrip":     strFilter(func(s string) string { return strings.TrimLeft(s, " \t\n\r") }),
 		"rstrip":     strFilter(func(s string) string { return strings.TrimRight(s, " \t\n\r") }),
 		"strip_html": strFilter(stripHTML),
+		// emphasize escapes text and wraps the listed words in <em> (whole words,
+		// any case, any script): {{ heading | emphasize: "new" }}.
+		"emphasize": emphasize,
 		"newline_to_br": func(in interface{}, _ FilterArgs) (interface{}, error) {
 			return safeString(strings.ReplaceAll(html.EscapeString(toString(in)), "\n", "<br>")), nil
 		},

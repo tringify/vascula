@@ -3,6 +3,10 @@
 ## Unreleased
 
 - **Filters:** the `slug` filter makes a URL- and attribute-safe name from text.
+- **Filters:** the `emphasize` filter escapes text and wraps the listed words
+  in `<em>` (whole words, any case, any script).
+- **Output observation:** a variable printed through a single `emphasize`
+  filter is observed, with `OutputSpan.Markup` set.
 - **Inspection:** `Template.FilterNames` lists every filter a template calls,
   with the position of its first call; `IsBuiltinFilter` and `BuiltinFilters`
   identify Vascula's own filters.

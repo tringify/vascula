@@ -78,7 +78,7 @@ Values: `"string"`, `'string'`, `42`, `-1.5`, `true`, `false`, `nil`,
 | Group | Filters |
 |---|---|
 | Strings | `upcase`, `downcase`, `capitalize`, `strip`, `lstrip`, `rstrip`, `strip_newlines`, `append`, `prepend`, `replace`, `replace_first`, `remove`, `remove_first`, `truncate`, `truncatewords`, `split`, `slice`, `size` |
-| HTML | `escape`, `escape_once`, `strip_html`, `newline_to_br` |
+| HTML | `escape`, `escape_once`, `strip_html`, `newline_to_br`, `emphasize` |
 | Numbers | `plus`, `minus`, `times`, `divided_by`, `modulo`, `round`, `ceil`, `floor`, `abs`, `at_least`, `at_most` |
 | Arrays | `join`, `first`, `last`, `map`, `where`, `sort`, `sort_natural`, `reverse`, `uniq`, `compact`, `concat`, `sum`, `slice`, `size` |
 | Other | `date`, `url_encode`, `url_decode`, `slug`, `default` (named: `allow_false`), `json` |

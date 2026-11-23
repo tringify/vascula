@@ -204,22 +204,28 @@ func (e *evalCtx) renderNodes(nodes []node) error {
 // printedVar returns the variable whose own value an output prints: a bare
 // variable, or a variable with a single default filter whose value is not
 // empty, so the fallback is not what appears.
-func (e *evalCtx) printedVar(expr expression) (varExpr, bool) {
+func (e *evalCtx) printedVar(expr expression) (varExpr, bool, bool) {
 	switch x := expr.(type) {
 	case varExpr:
-		return x, true
+		return x, false, true
 	case filterExpr:
 		base, ok := x.base.(varExpr)
-		if !ok || len(x.filters) != 1 || x.filters[0].name != "default" {
-			return varExpr{}, false
+		if !ok || len(x.filters) != 1 {
+			return varExpr{}, false, false
 		}
-		v, err := e.evalExpr(base)
-		if err != nil || v == nil || v == false || isEmptyValue(v) {
-			return varExpr{}, false
+		switch x.filters[0].name {
+		case "emphasize":
+			// emphasize prints the variable's own text with <em> elements added.
+			return base, true, true
+		case "default":
+			v, err := e.evalExpr(base)
+			if err != nil || v == nil || v == false || isEmptyValue(v) {
+				return varExpr{}, false, false
+			}
+			return base, false, true
 		}
-		return base, true
 	}
-	return varExpr{}, false
+	return varExpr{}, false, false
 }
 
 func (e *evalCtx) renderNode(n node) error {
@@ -253,7 +259,7 @@ func (e *evalCtx) renderNode(n node) error {
 			return err
 		}
 		if e.observeOutput != nil && x.inHTMLText && e.out == e.finalOut {
-			if direct, ok := e.printedVar(x.expr); ok {
+			if direct, markup, ok := e.printedVar(x.expr); ok {
 				path := make([]string, 0, len(direct.segs))
 				for _, seg := range direct.segs {
 					if seg.idx != nil {
@@ -267,7 +273,7 @@ func (e *evalCtx) renderNode(n node) error {
 					if err != nil {
 						return err
 					}
-					e.observeOutput(OutputSpan{Path: path, RootValue: root, Start: start, End: e.out.Len()})
+					e.observeOutput(OutputSpan{Path: path, RootValue: root, Start: start, End: e.out.Len(), Markup: markup})
 				}
 			}
 		}
