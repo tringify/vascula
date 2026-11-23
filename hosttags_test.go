@@ -1,0 +1,172 @@
+package vascula
+
+import (
+	"errors"
+	"strings"
+	"testing"
+)
+
+func TestHostTags(t *testing.T) {
+	opts := CompileOptions{Tags: map[string]TagDefinition{
+		"badge":   {},
+		"zone":    {Argument: TagOptionalArgument},
+		"require": {Argument: TagRequiredArgument},
+	}}
+	tmpl, err := CompileWithOptions(`<i>{% badge %}</i>{% zone %}{% for b in settings.list %}{% zone b %}{% endfor %}{% require settings.title | upcase %}`, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var seen []string
+	out, err := tmpl.Render(Options{
+		Settings: map[string]interface{}{"title": "hi", "list": []interface{}{"x", "y"}},
+		Tags: map[string]TagFunc{
+			"badge": func(TagCall) (SafeHTML, error) { return "<b>new</b>", nil },
+			"zone": func(c TagCall) (SafeHTML, error) {
+				b, ok := c.Lookup("b")
+				seen = append(seen, toString(c.Arg)+"/"+toString(b)+"/"+map[bool]string{true: "arg", false: "bare"}[c.HasArg]+"/"+map[bool]string{true: "b", false: "-"}[ok])
+				return "", nil
+			},
+			"require": func(c TagCall) (SafeHTML, error) { return SafeHTML("[" + toString(c.Arg) + "]"), nil },
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out != "<i><b>new</b></i>[HI]" {
+		t.Errorf("out = %q", out)
+	}
+	if strings.Join(seen, " ") != "//bare/- x/x/arg/b y/y/arg/b" {
+		t.Errorf("calls = %v", seen)
+	}
+	if !tmpl.UsesTag("zone") || tmpl.UsesTag("other") {
+		t.Error("UsesTag")
+	}
+}
+
+func TestHostTagRules(t *testing.T) {
+	for src, tags := range map[string]map[string]TagDefinition{
+		`{% badge %}`:         nil,                                          // undeclared
+		`{% badge x %}`:       {"badge": {}},                                // takes no argument
+		`{% require %}`:       {"require": {Argument: TagRequiredArgument}}, // needs one
+		`{% if %}{% endif %}`: {"if": {}},                                   // cannot replace a built-in
+		`{% Bad %}`:           {"Bad": {}},                                  // invalid name
+	} {
+		if _, err := CompileWithOptions(src, CompileOptions{Tags: tags}); err == nil {
+			t.Errorf("%s with %v compiled", src, tags)
+		}
+	}
+	tmpl, _ := CompileWithOptions(`{% badge %}`, CompileOptions{Tags: map[string]TagDefinition{"badge": {}}})
+	if _, err := tmpl.Render(Options{}); err == nil {
+		t.Error("a declared tag without an implementation rendered")
+	}
+	failing, _ := CompileWithOptions("\n {% badge %}", CompileOptions{Tags: map[string]TagDefinition{"badge": {}}})
+	cause := errors.New("boom")
+	_, err := failing.Render(Options{Tags: map[string]TagFunc{"badge": func(TagCall) (SafeHTML, error) { return "", cause }}})
+	if !errors.Is(err, cause) || !strings.Contains(err.Error(), "line 2, col 2") {
+		t.Errorf("host tag error lost its cause or position: %v", err)
+	}
+}
+
+func TestGlobalsAndReservedNames(t *testing.T) {
+	child, _ := Compile(`{{ site.settings.brand }}`)
+	parent, err := CompileWithOptions(`{{ site.settings.brand }}|{% render "c" %}`, CompileOptions{Reserved: []string{"site"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := parent.Render(Options{Globals: siteGlobals(map[string]interface{}{"brand": "Acme"}), Resolve: func(string) (Child, error) { return Child{Template: child}, nil }})
+	if err != nil || out != "Acme|Acme" {
+		t.Fatalf("globals must reach children: %q, %v", out, err)
+	}
+	for _, src := range []string{
+		`{% assign site = 1 %}`, `{% capture site %}x{% endcapture %}`, `{% for site in settings.l %}{% endfor %}`,
+		`{% render "c", site: 1 %}`, `{% assign settings = 1 %}`, `{% capture forloop %}{% endcapture %}`,
+	} {
+		if _, err := CompileWithOptions(src, CompileOptions{Reserved: []string{"site"}}); err == nil {
+			t.Errorf("%s compiled", src)
+		}
+	}
+	var undeclared *UndeclaredNameError
+	tmpl, _ := Compile(`{{ missing }}`)
+	if _, err := tmpl.Render(Options{}); !errors.As(err, &undeclared) || undeclared.Name != "missing" {
+		t.Errorf("want UndeclaredNameError, got %v", err)
+	}
+}
+
+func renderForTest(t *testing.T, src string, ctx map[string]interface{}, allowed []string) (string, error) {
+	t.Helper()
+	tmpl, err := compileFixture(src)
+	if err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	return tmpl.Render(Options{Data: ctx, Allow: allowed})
+}
+
+func TestFormTagEmitsActionCSRFAndAttrs(t *testing.T) {
+	out, err := renderForTest(t,
+		`{% form "save", class: "buy-form" %}<button>Add</button>{% endform %}`,
+		map[string]interface{}{"token": `tok"1`}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`<form method="post" action="/save" data-action="save" class="buy-form">`,
+		`<input type="hidden" name="authenticity_token" value="tok&#34;1">`,
+		`<button>Add</button>`,
+		`</form>`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q in %q", want, out)
+		}
+	}
+}
+
+func TestFormTagMultipartForUploads(t *testing.T) {
+	out, err := renderForTest(t, `{% form "upload" %}{% endform %}`,
+		map[string]interface{}{"token": "tok"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, `enctype="multipart/form-data"`) {
+		t.Fatalf("multipart enctype missing: %q", out)
+	}
+}
+
+func TestFormTagUnknownKindFailsCompile(t *testing.T) {
+	if _, err := compileFixture(`{% form "teleport" %}{% endform %}`); err == nil {
+		t.Fatal("unknown action kind must fail at compile")
+	}
+}
+
+func TestFormTagDynamicKindFailsCompile(t *testing.T) {
+	if _, err := compileFixture(`{% form settings.kind %}{% endform %}`); err == nil {
+		t.Fatal("dynamic action kind must fail at compile")
+	}
+}
+
+func TestFormTagMissingCSRFFailsRender(t *testing.T) {
+	if _, err := renderForTest(t, `{% form "save" %}{% endform %}`, map[string]interface{}{}, nil); err == nil {
+		t.Fatal("missing token must fail loud, not emit a tokenless form")
+	}
+}
+
+func TestUsesFormDetection(t *testing.T) {
+	with, _ := compileFixture(`{% if a %}{% form "login" %}x{% endform %}{% endif %}`)
+	if !with.UsesForm() {
+		t.Fatal("UsesForm must see nested form tags")
+	}
+	without, _ := compileFixture(`{{ shop.name }}`)
+	if without.UsesForm() {
+		t.Fatal("false positive")
+	}
+}
+
+func TestFormBodyRenderTargetsWalked(t *testing.T) {
+	tmpl, err := compileFixture(`{% form "save" %}{% render "child-snippet" %}{% endform %}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targets := tmpl.RenderTargets()
+	if len(targets) != 1 || targets[0] != "child-snippet" {
+		t.Fatalf("form body render targets not walked: %v", targets)
+	}
+}

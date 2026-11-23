@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://vascula.dev
+    about: The language, the Go API and every error message.
+  - name: Report a security problem
+    url: https://github.com/tringify/vascula/security/advisories/new
+    about: Please report vulnerabilities privately, not in a public issue.
